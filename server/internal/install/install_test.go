@@ -2,6 +2,7 @@ package install
 
 import (
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,12 +16,19 @@ import (
 type fakeExec struct {
 	calls     []string
 	tailscale error
+	v6        string
 }
 
 func (f *fakeExec) run(name string, args ...string) (string, error) {
 	f.calls = append(f.calls, name+" "+strings.Join(args, " "))
 	switch name {
 	case "tailscale":
+		if len(args) > 1 && args[1] == "-6" {
+			if f.v6 == "" {
+				return "", errors.New("no v6")
+			}
+			return f.v6 + "\n", nil
+		}
 		if f.tailscale != nil {
 			return "", f.tailscale
 		}
@@ -128,5 +136,99 @@ func TestUninstall(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(ex.calls, "\n"), "systemctl --user disable --now mudod.service") {
 		t.Errorf("calls = %v", ex.calls)
+	}
+}
+
+func installWithAPIAddr(t *testing.T, ex *fakeExec, addr, codeServer string) (Result, error) {
+	t.Helper()
+	o := options(t, ex)
+	o.CodeServer = codeServer
+	p := paths.For(o.Home)
+	if err := os.MkdirAll(filepath.Dir(p.Config), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{Token: "tok", Host: "devbox", IngestAddr: config.DefaultIngestAddr, APIAddr: addr}
+	if err := cfg.Write(p.Config); err != nil {
+		t.Fatal(err)
+	}
+	return Run(o)
+}
+
+func linkURL(t *testing.T, res Result) string {
+	t.Helper()
+	u, err := url.Parse(res.ConnectURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return u.Query().Get("url")
+}
+
+func TestWildcardUsesTailscaleV6(t *testing.T) {
+	for _, addr := range []string{"[::]:7879", "0.0.0.0:7879", ":7879"} {
+		res, err := installWithAPIAddr(t, &fakeExec{v6: "fd7a::1"}, addr, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := linkURL(t, res); got != "http://[fd7a::1]:7879" {
+			t.Errorf("%s: url = %s", addr, got)
+		}
+		if !strings.Contains(res.ConnectURL, "url=http%3A%2F%2F%5Bfd7a%3A%3A1%5D%3A7879") {
+			t.Errorf("not encoded: %s", res.ConnectURL)
+		}
+	}
+}
+
+func TestWildcardFallsBackToV4(t *testing.T) {
+	res, err := installWithAPIAddr(t, &fakeExec{}, "[::]:7879", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := linkURL(t, res); got != "http://100.64.0.5:7879" {
+		t.Fatalf("url = %s", got)
+	}
+}
+
+func TestSpecificAddrUsedAsIs(t *testing.T) {
+	res, err := installWithAPIAddr(t, &fakeExec{v6: "fd7a::9"}, "[fd7a::2]:7879", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := linkURL(t, res); got != "http://[fd7a::2]:7879" {
+		t.Fatalf("url = %s", got)
+	}
+	res, err = installWithAPIAddr(t, &fakeExec{}, "100.64.0.7:7879", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := linkURL(t, res); got != "http://100.64.0.7:7879" {
+		t.Fatalf("url = %s", got)
+	}
+}
+
+func TestCodeServerParam(t *testing.T) {
+	res, err := installWithAPIAddr(t, &fakeExec{}, "100.64.0.7:7879", "https://code.example.com/?folder=/x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, _ := url.Parse(res.ConnectURL)
+	if got := u.Query().Get("code_server"); got != "https://code.example.com/?folder=/x" {
+		t.Fatalf("code_server = %q", got)
+	}
+	res, _ = installWithAPIAddr(t, &fakeExec{}, "100.64.0.7:7879", "")
+	if strings.Contains(res.ConnectURL, "code_server") {
+		t.Fatalf("unexpected code_server: %s", res.ConnectURL)
+	}
+}
+
+func TestInvalidCodeServerIsError(t *testing.T) {
+	for _, bad := range []string{"not a url", "ftp://x/y", "http://", "code.example.com"} {
+		ex := &fakeExec{}
+		_, err := installWithAPIAddr(t, ex, "100.64.0.7:7879", bad)
+		if err == nil || !strings.Contains(err.Error(), "--code-server") {
+			t.Errorf("%q: err = %v", bad, err)
+		}
+		if len(ex.calls) != 0 {
+			t.Errorf("%q: ran commands before validating: %v", bad, ex.calls)
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,11 +38,17 @@ func installOptions() (install.Options, error) {
 	}, nil
 }
 
-func runInstall([]string) error {
+func runInstall(args []string) error {
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	codeServer := fs.String("code-server", "", "optional code-server `url` (http/https) to include in the add link")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	o, err := installOptions()
 	if err != nil {
 		return err
 	}
+	o.CodeServer = *codeServer
 	res, err := install.Run(o)
 	for _, w := range res.Warnings {
 		fmt.Println("warning:", w)

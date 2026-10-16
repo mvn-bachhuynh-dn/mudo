@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -20,7 +21,9 @@ type Options struct {
 	Hostname string
 	User     string
 	Now      func() time.Time
-	Exec     func(name string, args ...string) (string, error)
+	// CodeServer is an optional http(s) URL added to the link as code_server.
+	CodeServer string
+	Exec       func(name string, args ...string) (string, error)
 }
 
 type Result struct {
@@ -49,6 +52,12 @@ func Run(o Options) (Result, error) {
 	p := paths.For(o.Home)
 	var res Result
 
+	if o.CodeServer != "" {
+		u, err := url.Parse(o.CodeServer)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return res, fmt.Errorf("invalid --code-server %q: must be an http(s) URL such as https://code.example.com", o.CodeServer)
+		}
+	}
 	if err := installBinary(o.Self, p.Bin); err != nil {
 		return res, fmt.Errorf("install binary: %w", err)
 	}
@@ -79,7 +88,10 @@ func Run(o Options) (Result, error) {
 		return res, fmt.Errorf("kiro hooks: %w", err)
 	}
 
-	q := url.Values{"name": {cfg.Host}, "url": {"http://" + cfg.APIAddr}, "token": {cfg.Token}}
+	q := url.Values{"name": {cfg.Host}, "url": {"http://" + linkHostPort(o, cfg.APIAddr)}, "token": {cfg.Token}}
+	if o.CodeServer != "" {
+		q.Set("code_server", o.CodeServer)
+	}
 	res.ConnectURL = "mudo://add?" + q.Encode()
 	return res, nil
 }
@@ -132,4 +144,49 @@ func ensureConfig(o Options, path string, res *Result) (config.Config, error) {
 	}
 	cfg = config.Config{Token: token, Host: o.Hostname, IngestAddr: config.DefaultIngestAddr, APIAddr: ip + ":" + config.DefaultAPIPort}
 	return cfg, cfg.Write(path)
+}
+
+// linkHostPort turns api_addr into something a remote client can reach.
+// A wildcard host (::, 0.0.0.0, empty) is replaced by the Tailscale address,
+// preferring IPv6, then IPv4, then the first global non-docker interface IP.
+func linkHostPort(o Options, apiAddr string) string {
+	host, port, err := net.SplitHostPort(apiAddr)
+	if err != nil {
+		return apiAddr
+	}
+	if ip := net.ParseIP(host); host != "" && (ip == nil || !ip.IsUnspecified()) {
+		return net.JoinHostPort(host, port)
+	}
+	for _, flag := range []string{"-6", "-4"} {
+		if out, err := o.Exec("tailscale", "ip", flag); err == nil {
+			if f := strings.Fields(out); len(f) > 0 && net.ParseIP(f[0]) != nil {
+				return net.JoinHostPort(f[0], port)
+			}
+		}
+	}
+	if ip := firstGlobalIP(); ip != "" {
+		return net.JoinHostPort(ip, port)
+	}
+	return net.JoinHostPort(host, port)
+}
+
+func firstGlobalIP() string {
+	ifs, err := net.Interfaces()
+	if err != nil {
+		return ""
+	}
+	for _, ifc := range ifs {
+		n := ifc.Name
+		if ifc.Flags&net.FlagUp == 0 || ifc.Flags&net.FlagLoopback != 0 ||
+			strings.HasPrefix(n, "docker") || strings.HasPrefix(n, "br-") || strings.HasPrefix(n, "veth") {
+			continue
+		}
+		addrs, _ := ifc.Addrs()
+		for _, a := range addrs {
+			if ipn, ok := a.(*net.IPNet); ok && ipn.IP.IsGlobalUnicast() {
+				return ipn.IP.String()
+			}
+		}
+	}
+	return ""
 }
