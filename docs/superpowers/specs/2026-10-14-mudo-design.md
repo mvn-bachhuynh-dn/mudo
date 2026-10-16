@@ -292,6 +292,7 @@ must-do/
 
 ## 10. Open items to verify during implementation
 
-- Kiro CLI stdin field names (use `MUDO_HOOK_DUMP=1` on first real run).
+- ~~Kiro CLI stdin field names~~ Verified 2026-10-16 (kiro-cli 2.22.0, KAS 0.66.0) with `MUDO_HOOK_DUMP=1`: payload is snake_case like Claude: `session_id` (`sess_<uuid>`), `hook_event_name`, `cwd`, `prompt` (UserPromptSubmit), `tool_name` (PreToolUse, e.g. `read_file`). All four triggers fire from `~/.kiro/hooks/mudo.json`; PreToolUse needs no matcher. Hooks do NOT fire with `kiro-cli chat --no-interactive`, only in the interactive TUI, so headless Kiro runs are invisible to MuDo.
+- Install on a host where the user is not logged in through PAM (e.g. code-server run as a system service) needs `sudo loginctl enable-linger <user>` and `XDG_RUNTIME_DIR=/run/user/<uid>`, or `systemctl --user` fails with "Failed to connect to bus". Claude end to end verified the same day: idle, running, done, ended; already-running Claude sessions picked up the new hooks without a restart.
 - ~~Process name of the Claude Code CLI~~ Verified 2026-10-16 on `devbox`: `comm` = `claude`. Kiro V3 runs as `kiro-cli` → `kiro-cli-chat`.
 - Whether code-server keeps `?folder=` in the tab URL after navigation inside the workspace (affects match rule 6.4 step 2a).
