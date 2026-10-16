@@ -29,6 +29,29 @@ public enum PanelPlacement {
         return CGPoint(x: m.maxX - width - margin, y: m.maxY - margin)
     }
 
+    /// Moves (and if needed shrinks) `frame` so it lies fully inside `visible`.
+    public static func clamp(_ frame: CGRect, to visible: CGRect) -> CGRect {
+        var f = frame
+        f.size.width = min(f.width, visible.width)
+        f.size.height = min(f.height, visible.height)
+        f.origin.x = min(max(f.minX, visible.minX), visible.maxX - f.width)
+        f.origin.y = min(max(f.minY, visible.minY), visible.maxY - f.height)
+        return f
+    }
+
+    /// The visible frame a panel at `frame` belongs to: the screen containing its center,
+    /// else the screen it overlaps most, else `main`.
+    public static func visibleFrame(for frame: CGRect, screens: [CGRect], main: CGRect?) -> CGRect? {
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        if let s = screens.first(where: { contains($0, center) }) { return s }
+        let overlaps = screens.map { s -> (CGRect, CGFloat) in
+            let i = s.intersection(frame)
+            return (s, i.isNull ? 0 : i.width * i.height)
+        }
+        if let best = overlaps.max(by: { $0.1 < $1.1 }), best.1 > 0 { return best.0 }
+        return main
+    }
+
     private static func contains(_ r: CGRect, _ p: CGPoint) -> Bool {
         p.x >= r.minX && p.x < r.maxX && p.y >= r.minY && p.y < r.maxY
     }

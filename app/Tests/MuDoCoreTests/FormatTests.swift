@@ -35,4 +35,34 @@ import Testing
         #expect(PanelPlacement.topLeft(saved: CGPoint(x: 5000, y: 5000), screens: [], main: nil, width: 100)
                 == CGPoint(x: 5000, y: 5000))
     }
+
+    @Test func clampPullsOffscreenFrameInside() {
+        let frame = CGRect(x: 1440, y: 995, width: 160, height: 32)
+        #expect(PanelPlacement.clamp(frame, to: main) == CGRect(x: 1280, y: 843, width: 160, height: 32))
+    }
+
+    @Test func clampKeepsFrameAlreadyInside() {
+        let frame = CGRect(x: 100, y: 100, width: 160, height: 32)
+        #expect(PanelPlacement.clamp(frame, to: main) == frame)
+    }
+
+    @Test func clampShrinksFrameLargerThanScreen() {
+        let frame = CGRect(x: -50, y: -50, width: 2000, height: 1000)
+        #expect(PanelPlacement.clamp(frame, to: main) == main)
+    }
+
+    @Test func screenContainingCenterWins() {
+        let frame = CGRect(x: 1400, y: 500, width: 160, height: 32)  // center x = 1480, on side
+        #expect(PanelPlacement.visibleFrame(for: frame, screens: [main, side], main: main) == side)
+    }
+
+    @Test func largestIntersectionWhenCenterIsOffscreen() {
+        let frame = CGRect(x: 1300, y: 1040, width: 160, height: 40)  // center y = 1060, above both
+        #expect(PanelPlacement.visibleFrame(for: frame, screens: [main, side], main: main) == side)
+    }
+
+    @Test func mainWhenFrameTouchesNoScreen() {
+        let frame = CGRect(x: 9000, y: 9000, width: 160, height: 32)
+        #expect(PanelPlacement.visibleFrame(for: frame, screens: [main, side], main: main) == main)
+    }
 }

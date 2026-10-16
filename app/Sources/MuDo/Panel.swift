@@ -21,12 +21,12 @@ final class FloatingPanel: NSPanel {
     }
 }
 
-/// Hosting view that reports hover even when MuDo is not the active app,
+/// Hosting view that reports the pointer entering even when MuDo is not the active app,
 /// accepts the first click, and lets the background drag the panel.
 /// The always-active tracking area also delivers `mouseMoved`, which NSHostingView turns
 /// into SwiftUI hover updates, so `.onContinuousHover` works while MuDo is inactive.
 final class HoverHostingView<Content: View>: NSHostingView<Content> {
-    var onHover: ((Bool) -> Void)?
+    var onPointerEntered: (() -> Void)?
     private var hoverArea: NSTrackingArea?
 
     override var mouseDownCanMoveWindow: Bool { true }
@@ -45,12 +45,7 @@ final class HoverHostingView<Content: View>: NSHostingView<Content> {
 
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
-        onHover?(true)
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        super.mouseExited(with: event)
-        onHover?(false)
+        onPointerEntered?()
     }
 }
 
@@ -60,26 +55,52 @@ final class PanelState {
     private(set) var hovering = false
     private(set) var pinned = false
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
-    @ObservationIgnored private var collapseTask: Task<Void, Never>?
+    /// Whether the pointer is over the panel right now (screen coordinates, not tracking areas).
+    @ObservationIgnored var pointerInside: () -> Bool = { false }
+    @ObservationIgnored private var watchTask: Task<Void, Never>?
+
+    private static let pollInterval = Duration.milliseconds(200)
+    private static let collapseDelay = Duration.milliseconds(1500)
 
     var isExpanded: Bool { hovering || pinned }
 
     func pointerEntered() {
-        collapseTask?.cancel()
         hovering = true
-    }
-
-    func pointerExited() {
-        collapseTask?.cancel()
-        collapseTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.5))
-            guard !Task.isCancelled else { return }
-            self?.hovering = false
-        }
+        watchPointer()
     }
 
     func togglePinned() {
         pinned.toggle()
+        watchPointer()
+    }
+
+    /// While expanded, polls the pointer instead of trusting `mouseExited`, which AppKit does not
+    /// deliver when the window resizes or moves under the pointer. Collapses a hover expansion once
+    /// the pointer has been outside for `collapseDelay`; a pinned panel stays open.
+    private func watchPointer() {
+        guard watchTask == nil, isExpanded else { return }
+        watchTask = Task { [weak self] in
+            let clock = ContinuousClock()
+            var outsideSince: ContinuousClock.Instant?
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.pollInterval)
+                guard let self, self.isExpanded else { break }
+                if self.pointerInside() {
+                    self.hovering = true
+                    outsideSince = nil
+                } else if self.pinned {
+                    outsideSince = nil
+                } else if let since = outsideSince {
+                    if clock.now - since >= Self.collapseDelay {
+                        self.hovering = false
+                        break
+                    }
+                } else {
+                    outsideSince = clock.now
+                }
+            }
+            self?.watchTask = nil
+        }
     }
 
     func contentSizeChanged(_ size: CGSize) {
@@ -96,15 +117,19 @@ final class PanelController {
     private let defaults: UserDefaults
     /// True while we move the panel ourselves, so the move is not saved as the user's choice.
     private var movingProgrammatically = false
+    /// Debounces `didMove` so a user drag is handled once, after it ends.
+    private var moveSettleTask: Task<Void, Never>?
 
     init(model: AppModel, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let host = HoverHostingView(rootView: RootView(model: model, panel: state))
         host.sizingOptions = []
-        host.onHover = { [weak state] inside in
-            if inside { state?.pointerEntered() } else { state?.pointerExited() }
-        }
+        host.onPointerEntered = { [weak state] in state?.pointerEntered() }
         panel.contentView = host
+        state.pointerInside = { [weak panel] in
+            guard let panel else { return false }
+            return NSMouseInRect(NSEvent.mouseLocation, panel.frame, false)
+        }
         state.onSizeChange = { [weak self] size in self?.resize(to: size) }
         NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.panelMoved() }
@@ -131,19 +156,18 @@ final class PanelController {
             if old.midX > visible.midX {
                 frame.origin.x = old.maxX - size.width
             }
-            frame = Self.clamp(frame, to: visible)
+            frame = PanelPlacement.clamp(frame, to: visible)
         }
         setFrame(frame)
         if !state.isExpanded { saveTopLeft() }
     }
 
-    private static func clamp(_ frame: NSRect, to visible: NSRect) -> NSRect {
-        var f = frame
-        f.size.width = min(f.width, visible.width)
-        f.size.height = min(f.height, visible.height)
-        f.origin.x = min(max(f.minX, visible.minX), visible.maxX - f.width)
-        f.origin.y = min(max(f.minY, visible.minY), visible.maxY - f.height)
-        return f
+    /// `frame` moved fully inside the visible frame of the screen it belongs to.
+    private static func onScreen(_ frame: NSRect) -> NSRect {
+        guard let visible = PanelPlacement.visibleFrame(
+            for: frame, screens: NSScreen.screens.map(\.visibleFrame),
+            main: NSScreen.main?.visibleFrame) else { return frame }
+        return PanelPlacement.clamp(frame, to: visible)
     }
 
     private func setFrame(_ frame: NSRect) {
@@ -152,10 +176,27 @@ final class PanelController {
         panel.setFrame(frame, display: true)
     }
 
-    /// Only the collapsed pill's position is remembered (user drags, not our own moves).
+    /// A user drag: once it settles, pull the panel back on screen and remember the collapsed
+    /// pill's position (our own moves are not saved).
     private func panelMoved() {
-        guard !movingProgrammatically, !state.isExpanded else { return }
-        saveTopLeft()
+        guard !movingProgrammatically else { return }
+        moveSettleTask?.cancel()
+        moveSettleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            self?.userMoveEnded()
+        }
+    }
+
+    private func userMoveEnded() {
+        // Still dragging (the pointer just paused): wait for the button to be released.
+        if NSEvent.pressedMouseButtons & 1 != 0 {
+            panelMoved()
+            return
+        }
+        let frame = Self.onScreen(panel.frame)
+        if frame != panel.frame { setFrame(frame) }
+        if !state.isExpanded { saveTopLeft() }
     }
 
     private func saveTopLeft() {
@@ -172,8 +213,13 @@ final class PanelController {
             screens: NSScreen.screens.map(\.visibleFrame),
             main: NSScreen.main?.visibleFrame,
             width: max(panel.frame.width, 160)) else { return }
-        movingProgrammatically = true
-        defer { movingProgrammatically = false }
-        panel.setFrameTopLeftPoint(topLeft)
+        let size = panel.frame.size
+        let frame = Self.onScreen(NSRect(x: topLeft.x, y: topLeft.y - size.height,
+                                         width: size.width, height: size.height))
+        setFrame(frame)
+        // A saved position that was (partly) off screen is replaced by the corrected one.
+        if let saved, saved != CGPoint(x: frame.minX, y: frame.maxY), !state.isExpanded {
+            saveTopLeft()
+        }
     }
 }
