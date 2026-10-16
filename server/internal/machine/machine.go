@@ -26,7 +26,10 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 
 	s := *prev
 	changed := false
-	if ev.Cwd != "" && ev.Cwd != s.Cwd {
+	// Hooks report the agent's current directory, which drifts when the agent
+	// cd's. Keep the session's starting cwd unless it is unknown or a fresh
+	// session_start (e.g. /clear, resume) re-homes it.
+	if ev.Cwd != "" && ev.Cwd != s.Cwd && (s.Cwd == "" || ev.Kind == model.EvSessionStart) {
 		s.Cwd, s.Project = ev.Cwd, projectName(ev.Cwd)
 		changed = true
 	}

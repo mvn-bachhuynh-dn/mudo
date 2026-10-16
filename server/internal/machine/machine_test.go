@@ -134,3 +134,48 @@ func TestEnd(t *testing.T) {
 		t.Fatal("ending an ended session must not move state_since")
 	}
 }
+
+// TestCwdDriftIgnored: hooks report the agent's current directory, which moves
+// when the agent cd's. Only session_start may re-home an existing session.
+func TestCwdDriftIgnored(t *testing.T) {
+	cases := map[model.EventKind]bool{ // kind -> whether cwd should change
+		model.EvPrompt:       false,
+		model.EvTool:         false,
+		model.EvWaiting:      false,
+		model.EvStop:         false,
+		model.EvSessionEnd:   false,
+		model.EvSessionStart: true,
+	}
+	for kind, want := range cases {
+		ev := event(kind)
+		ev.Cwd = "/w/api/app/Sources/MuDo"
+		got, _ := Apply(session(model.StateRunning), ev, "devbox", t0.Add(time.Minute))
+		changed := got.Cwd == ev.Cwd
+		if changed != want {
+			t.Errorf("%s: cwd=%q project=%q, want cwd changed=%v", kind, got.Cwd, got.Project, want)
+		}
+		if want && got.Project != "MuDo" {
+			t.Errorf("%s: project=%q, want MuDo", kind, got.Project)
+		}
+		if !want && (got.Cwd != "/w/api" || got.Project != "api") {
+			t.Errorf("%s: cwd=%q project=%q, want unchanged /w/api/api", kind, got.Cwd, got.Project)
+		}
+	}
+}
+
+func TestEmptyCwdAdoptsFirstNonEmpty(t *testing.T) {
+	prev := session(model.StateIdle)
+	prev.Cwd, prev.Project = "", ""
+	ev := event(model.EvPrompt)
+	ev.Cwd = "/w/api"
+	got, changed := Apply(prev, ev, "devbox", t0.Add(time.Minute))
+	if !changed || got.Cwd != "/w/api" || got.Project != "api" {
+		t.Fatalf("adopt: cwd=%q project=%q changed=%v", got.Cwd, got.Project, changed)
+	}
+
+	ev.Cwd = "/w/api/sub"
+	got, _ = Apply(&got, ev, "devbox", t0.Add(2*time.Minute))
+	if got.Cwd != "/w/api" {
+		t.Fatalf("later drift: cwd=%q, want /w/api", got.Cwd)
+	}
+}
