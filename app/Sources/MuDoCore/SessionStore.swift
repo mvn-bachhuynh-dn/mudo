@@ -142,3 +142,104 @@ public final class SessionStore {
         snoozedUntil = snoozedUntil.filter { session($0.key)?.state == .done }
     }
 }
+
+public enum Bucket: Int, Comparable, Sendable {
+    case waiting, stale, done, running, idle
+
+    public static func < (lhs: Bucket, rhs: Bucket) -> Bool { lhs.rawValue < rhs.rawValue }
+}
+
+public struct SessionRow: Identifiable, Equatable, Sendable {
+    public let id: SessionKey
+    public let session: Session
+    public let serverName: String
+    public let bucket: Bucket
+    /// `state_since` converted to the local clock.
+    public let since: Date
+    public let elapsed: TimeInterval
+    public let blinking: Bool
+    public let offline: Bool
+}
+
+public struct PillSummary: Equatable, Sendable {
+    public let running: Int
+    public let waiting: Int
+    public let done: Int
+    public let blinking: Bool
+    public let offline: Bool
+
+    public init(running: Int, waiting: Int, done: Int, blinking: Bool, offline: Bool) {
+        self.running = running
+        self.waiting = waiting
+        self.done = done
+        self.blinking = blinking
+        self.offline = offline
+    }
+}
+
+extension SessionStore {
+    public var isPaused: Bool {
+        guard let until = pausedUntil else { return false }
+        return until > now
+    }
+
+    public func pause(for duration: TimeInterval) {
+        tick()
+        pausedUntil = now.addingTimeInterval(duration)
+    }
+
+    public func resume() {
+        pausedUntil = nil
+    }
+
+    public func snooze(_ key: SessionKey) {
+        guard session(key)?.state == .done else { return }
+        tick()
+        snoozedUntil[key] = now.addingTimeInterval(snoozeFor)
+    }
+
+    public func clearSnooze(_ key: SessionKey) {
+        snoozedUntil[key] = nil
+    }
+
+    public var rows: [SessionRow] {
+        let paused = isPaused
+        var out: [SessionRow] = []
+        for (serverID, server) in serverStates {
+            let offline = server.status != .connected
+            for s in server.sessions.values where s.state != .ended {
+                let key = SessionKey(serverID: serverID, sessionID: s.id)
+                let since = s.stateSince.addingTimeInterval(-server.offset)
+                let elapsed = max(0, now.timeIntervalSince(since))
+                let bucket: Bucket = switch s.state {
+                case .waiting: .waiting
+                case .done: elapsed >= staleAfter ? .stale : .done
+                case .running: .running
+                case .idle, .ended: .idle
+                }
+                let snoozed = snoozedUntil[key].map { $0 > now } ?? false
+                out.append(SessionRow(
+                    id: key, session: s, serverName: server.name, bucket: bucket,
+                    since: since, elapsed: elapsed,
+                    blinking: bucket == .stale && !snoozed && !paused && !offline,
+                    offline: offline))
+            }
+        }
+        return out.sorted { a, b in
+            if a.bucket != b.bucket { return a.bucket < b.bucket }
+            if a.since != b.since { return a.since < b.since }
+            if a.id.serverID != b.id.serverID { return a.id.serverID.uuidString < b.id.serverID.uuidString }
+            return a.id.sessionID < b.id.sessionID
+        }
+    }
+
+    public var pill: PillSummary {
+        let all = rows
+        return PillSummary(
+            running: all.count(where: { $0.bucket == .running }),
+            waiting: all.count(where: { $0.bucket == .waiting }),
+            done: all.count(where: { $0.bucket == .done || $0.bucket == .stale }),
+            blinking: all.contains(where: \.blinking),
+            offline: serverStates.values.allSatisfy { $0.status != .connected })
+    }
+}
