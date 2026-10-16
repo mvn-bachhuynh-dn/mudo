@@ -37,7 +37,10 @@ final class ChromeTabFocuser {
                 if let tab = TabMatcher.match(tabs: tabs, codeServer: codeServer, cwd: cwd, project: project) {
                     switch await run(ChromeScripts.focus(tab), parse: { _ in true }) {
                     case .ok: return
-                    case .denied: onAutomationDenied?()
+                    case .denied:
+                        onAutomationDenied?()
+                        openNewWindow(target, chrome: chrome)
+                        return
                     case .failed: break
                     }
                 }
@@ -86,9 +89,10 @@ final class ChromeTabFocuser {
         guard list.numberOfItems > 0 else { return [] }
         return (1...list.numberOfItems).compactMap { i in
             guard let item = list.atIndex(i), item.numberOfItems == 4,
+                  let window = item.atIndex(1), let tabIdx = item.atIndex(2),
                   let url = item.atIndex(3)?.stringValue else { return nil }
-            return ChromeTab(windowID: Int(item.atIndex(1)?.int32Value ?? 0),
-                             tabIndex: Int(item.atIndex(2)?.int32Value ?? 0),
+            return ChromeTab(windowID: Int(window.int32Value),
+                             tabIndex: Int(tabIdx.int32Value),
                              url: url,
                              title: item.atIndex(4)?.stringValue ?? "")
         }
