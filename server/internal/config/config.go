@@ -54,6 +54,9 @@ func Load(path string) (Config, error) {
 		}
 		*dst = val
 	}
+	if err := sc.Err(); err != nil {
+		return Config{}, fmt.Errorf("config: %s: %w", path, err)
+	}
 	if c.IngestAddr == "" {
 		c.IngestAddr = DefaultIngestAddr
 	}
@@ -72,7 +75,17 @@ func (c Config) Write(path string) error {
 	}
 	content := fmt.Sprintf("# MuDo daemon config\ntoken = %q\nhost = %q\ningest_addr = %q\napi_addr = %q\n",
 		c.Token, c.Host, c.IngestAddr, c.APIAddr)
-	return os.WriteFile(path, []byte(content), 0o600)
+	// WriteFile only applies the mode when it creates the file, so write a
+	// temp file, force 0600, then rename over the target (atomic).
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(content), 0o600); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp, 0o600); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func NewToken() (string, error) {

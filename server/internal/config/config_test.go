@@ -25,6 +25,24 @@ func TestWriteLoadRoundTrip(t *testing.T) {
 	}
 }
 
+func TestWriteTightensExistingFileMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := Config{Token: "abc", APIAddr: "0.0.0.0:7879"}
+	if err := c.Write(path); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Stat(path)
+	if err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %v, err = %v", fi.Mode().Perm(), err)
+	}
+}
+
 func TestLoadAppliesDefaultsAndIgnoresComments(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
 	content := "# MuDo\n\ntoken = \"abc\"\napi_addr = \"0.0.0.0:7879\"\n"
