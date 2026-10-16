@@ -32,7 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         var added = false
-        for url in urls where model?.handle(url: url) == true { added = true }
+        for url in urls where model?.handle(url: url) == .added { added = true }
         if added { settingsWindow?.show() }
     }
 

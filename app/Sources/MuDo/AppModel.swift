@@ -20,6 +20,7 @@ final class AppModel {
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private let pathMonitor = NWPathMonitor()
     @ObservationIgnored private var pathSatisfied: Bool?
+    private static let linkLog = Logger(subsystem: "dev.steve.MuDo", category: "link")
     private static let streamLog = Logger(subsystem: "dev.steve.MuDo", category: "stream")
 
     init(settings: AppSettings) {
@@ -96,13 +97,38 @@ final class AppModel {
         }
     }
 
-    /// Handles `mudo://add?...`. Returns false for anything else.
+    enum LinkResult: Equatable {
+        case added
+        case focused
+        /// A focus link that matched no session row.
+        case focusMissed
+        case unhandled
+    }
+
+    /// Handles `mudo://add?...` and `mudo://focus?...`.
     @discardableResult
-    func handle(url: URL) -> Bool {
-        guard let draft = AddLink.parse(url) else { return false }
-        settings.add(draft)
-        applySettings()
-        return true
+    func handle(url: URL) -> LinkResult {
+        if let draft = AddLink.parse(url) {
+            settings.add(draft)
+            applySettings()
+            return .added
+        }
+        if let target = FocusLink.parse(url) {
+            let row = store.rows.first {
+                switch target {
+                case let .session(id): $0.session.id == id
+                case let .project(name): $0.session.project == name
+                }
+            }
+            guard let row else {
+                let known = store.rows.map { "\($0.session.project)#\($0.session.id)" }.joined(separator: ", ")
+                Self.linkLog.info("focus link matched no row: \(url.absoluteString, privacy: .public); rows: [\(known, privacy: .public)]")
+                return .focusMissed
+            }
+            open(row)
+            return .focused
+        }
+        return .unhandled
     }
 
     private func retryAcks(_ keys: [SessionKey]) {

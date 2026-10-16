@@ -91,7 +91,7 @@ struct SettingsView: View {
 
     private func addLink() {
         guard let url = URL(string: link.trimmingCharacters(in: .whitespacesAndNewlines)),
-              model.handle(url: url) else {
+              model.handle(url: url) == .added else {
             linkError = true
             return
         }

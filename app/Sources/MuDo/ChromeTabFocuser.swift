@@ -44,7 +44,10 @@ final class ChromeTabFocuser {
         }
         Task {
             defer { inFlight = false }
-            switch await run(ChromeScripts.listTabs, parse: Self.parseTabs) {
+            let listStart = ContinuousClock.now
+            let listed = await run(ChromeScripts.listTabs, parse: Self.parseTabs)
+            let listMs = Int((ContinuousClock.now - listStart) / .milliseconds(1))
+            switch listed {
             case .denied:
                 Self.log.info("list tabs denied -> open -na")
                 onAutomationDenied?()
@@ -55,14 +58,16 @@ final class ChromeTabFocuser {
                 openNewWindow(target, chrome: chrome)
                 return
             case let .ok(tabs):
-                Self.log.info("listed \(tabs.count, privacy: .public) tabs")
+                Self.log.info("listed \(tabs.count, privacy: .public) tabs in \(listMs, privacy: .public) ms")
                 for t in tabs where TabMatcher.isUnder(codeServer: codeServer, t.url) {
                     Self.log.info("code-server tab w=\(t.windowID, privacy: .public) t=\(t.tabIndex, privacy: .public) url=\(t.url, privacy: .public) title=\(t.title, privacy: .public)")
                 }
                 if let tab = TabMatcher.match(tabs: tabs, codeServer: codeServer, cwd: cwd, project: project) {
                     Self.log.info("matched windowID=\(tab.windowID, privacy: .public) tabIndex=\(tab.tabIndex, privacy: .public)")
                     switch await run(ChromeScripts.focus(tab), parse: { _ in true }) {
-                    case .ok: return
+                    case .ok:
+                        Self.log.info("focused windowID=\(tab.windowID, privacy: .public) tabIndex=\(tab.tabIndex, privacy: .public)")
+                        return
                     case .denied:
                         Self.log.info("focus denied -> open -na")
                         onAutomationDenied?()
@@ -75,7 +80,9 @@ final class ChromeTabFocuser {
                     Self.log.info("no match -> new window script")
                 }
                 switch await run(ChromeScripts.newWindow(target), parse: { _ in true }) {
-                case .ok: return
+                case .ok:
+                    Self.log.info("new window opened")
+                    return
                 case .denied:
                     Self.log.info("new window denied -> open -na")
                     onAutomationDenied?()
