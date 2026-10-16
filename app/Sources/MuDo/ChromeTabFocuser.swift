@@ -1,9 +1,11 @@
 import AppKit
 import MuDoCore
+import os
 
 @MainActor
 final class ChromeTabFocuser {
     static let chromeBundleID = "com.google.Chrome"
+    private static let log = Logger(subsystem: "dev.steve.MuDo", category: "focus")
 
     var onAutomationDenied: (() -> Void)?
     /// Called whenever a script runs successfully, i.e. Automation access is granted.
@@ -18,6 +20,7 @@ final class ChromeTabFocuser {
 
     func focus(codeServer: URL, cwd: String, project: String) {
         let target = TabMatcher.targetURL(codeServer: codeServer, cwd: cwd)
+        Self.log.info("focus cwd=\(cwd, privacy: .public) project=\(project, privacy: .public) target=\(target.absoluteString, privacy: .public)")
         guard let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.chromeBundleID) else {
             NSWorkspace.shared.open(target)
             return
@@ -29,27 +32,41 @@ final class ChromeTabFocuser {
         Task {
             switch await run(ChromeScripts.listTabs, parse: Self.parseTabs) {
             case .denied:
+                Self.log.info("list tabs denied -> open -na")
                 onAutomationDenied?()
                 openNewWindow(target, chrome: chrome)
                 return
             case .failed:
+                Self.log.info("list tabs failed -> open -na")
                 openNewWindow(target, chrome: chrome)
                 return
             case let .ok(tabs):
+                Self.log.info("listed \(tabs.count, privacy: .public) tabs")
+                for t in tabs where TabMatcher.isUnder(codeServer: codeServer, t.url) {
+                    Self.log.info("code-server tab w=\(t.windowID, privacy: .public) t=\(t.tabIndex, privacy: .public) url=\(t.url, privacy: .public) title=\(t.title, privacy: .public)")
+                }
                 if let tab = TabMatcher.match(tabs: tabs, codeServer: codeServer, cwd: cwd, project: project) {
+                    Self.log.info("matched windowID=\(tab.windowID, privacy: .public) tabIndex=\(tab.tabIndex, privacy: .public)")
                     switch await run(ChromeScripts.focus(tab), parse: { _ in true }) {
                     case .ok: return
                     case .denied:
+                        Self.log.info("focus denied -> open -na")
                         onAutomationDenied?()
                         openNewWindow(target, chrome: chrome)
                         return
-                    case .failed: break
+                    case .failed:
+                        Self.log.info("focus failed -> new window script")
                     }
+                } else {
+                    Self.log.info("no match -> new window script")
                 }
                 switch await run(ChromeScripts.newWindow(target), parse: { _ in true }) {
                 case .ok: return
-                case .denied: onAutomationDenied?()
-                case .failed: break
+                case .denied:
+                    Self.log.info("new window denied -> open -na")
+                    onAutomationDenied?()
+                case .failed:
+                    Self.log.info("new window failed -> open -na")
                 }
                 openNewWindow(target, chrome: chrome)
             }
