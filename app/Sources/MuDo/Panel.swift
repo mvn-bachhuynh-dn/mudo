@@ -17,11 +17,14 @@ final class FloatingPanel: NSPanel {
         hasShadow = false
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
+        acceptsMouseMovedEvents = true
     }
 }
 
 /// Hosting view that reports hover even when MuDo is not the active app,
 /// accepts the first click, and lets the background drag the panel.
+/// The always-active tracking area also delivers `mouseMoved`, which NSHostingView turns
+/// into SwiftUI hover updates, so `.onContinuousHover` works while MuDo is inactive.
 final class HoverHostingView<Content: View>: NSHostingView<Content> {
     var onHover: ((Bool) -> Void)?
     private var hoverArea: NSTrackingArea?
@@ -34,7 +37,7 @@ final class HoverHostingView<Content: View>: NSHostingView<Content> {
         super.updateTrackingAreas()
         if let hoverArea { removeTrackingArea(hoverArea) }
         let area = NSTrackingArea(rect: .zero,
-                                  options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                  options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
                                   owner: self, userInfo: nil)
         addTrackingArea(area)
         hoverArea = area
@@ -91,6 +94,8 @@ final class PanelController {
     private let panel = FloatingPanel()
     private let state = PanelState()
     private let defaults: UserDefaults
+    /// True while we move the panel ourselves, so the move is not saved as the user's choice.
+    private var movingProgrammatically = false
 
     init(model: AppModel, defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -102,7 +107,7 @@ final class PanelController {
         panel.contentView = host
         state.onSizeChange = { [weak self] size in self?.resize(to: size) }
         NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.saveTopLeft() }
+            MainActor.assumeIsolated { self?.panelMoved() }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.place() }
@@ -114,13 +119,43 @@ final class PanelController {
         panel.orderFrontRegardless()
     }
 
+    /// Keeps the top edge, and the edge nearer the screen side (right edge in the right half),
+    /// fixed; then keeps the whole panel inside the screen's visible frame.
     private func resize(to size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
-        var frame = panel.frame
-        let top = frame.maxY
+        let old = panel.frame
+        var frame = old
         frame.size = size
-        frame.origin.y = top - size.height
+        frame.origin.y = old.maxY - size.height
+        if let visible = (panel.screen ?? NSScreen.main)?.visibleFrame {
+            if old.midX > visible.midX {
+                frame.origin.x = old.maxX - size.width
+            }
+            frame = Self.clamp(frame, to: visible)
+        }
+        setFrame(frame)
+        if !state.isExpanded { saveTopLeft() }
+    }
+
+    private static func clamp(_ frame: NSRect, to visible: NSRect) -> NSRect {
+        var f = frame
+        f.size.width = min(f.width, visible.width)
+        f.size.height = min(f.height, visible.height)
+        f.origin.x = min(max(f.minX, visible.minX), visible.maxX - f.width)
+        f.origin.y = min(max(f.minY, visible.minY), visible.maxY - f.height)
+        return f
+    }
+
+    private func setFrame(_ frame: NSRect) {
+        movingProgrammatically = true
+        defer { movingProgrammatically = false }
         panel.setFrame(frame, display: true)
+    }
+
+    /// Only the collapsed pill's position is remembered (user drags, not our own moves).
+    private func panelMoved() {
+        guard !movingProgrammatically, !state.isExpanded else { return }
+        saveTopLeft()
     }
 
     private func saveTopLeft() {
@@ -137,6 +172,8 @@ final class PanelController {
             screens: NSScreen.screens.map(\.visibleFrame),
             main: NSScreen.main?.visibleFrame,
             width: max(panel.frame.width, 160)) else { return }
+        movingProgrammatically = true
+        defer { movingProgrammatically = false }
         panel.setFrameTopLeftPoint(topLeft)
     }
 }

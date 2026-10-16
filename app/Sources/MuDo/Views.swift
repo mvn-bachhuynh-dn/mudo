@@ -119,6 +119,11 @@ struct SessionRowView: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
+        // Pointing at a blinking row counts as "seen" (snooze). Continuous hover also catches a row
+        // that starts blinking under a resting pointer as soon as the pointer moves.
+        .onContinuousHover { phase in
+            if case .active = phase, row.blinking { onSnooze() }
+        }
         .opacity(row.offline ? 0.5 : 1)
         .blink(row.blinking)
     }
