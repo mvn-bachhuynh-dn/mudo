@@ -2,6 +2,8 @@
 
 Floating widget that shows Claude Code and Kiro CLI sessions from `mudod` servers.
 
+Overview, install steps, usage and troubleshooting: see the [top-level README](../README.md).
+
 ## Build
 
 Needs macOS 26 and Xcode 26 (or its command line tools).
@@ -28,7 +30,7 @@ From the Linux server, `scripts/on-mac '<command>'` syncs `app/` to the Mac set 
 
 ## Add a server
 
-Run `mudod install` on the server, then open the printed `mudo://add?...` link on the Mac (or paste it in Settings). Append `&code_server=<url-encoded code-server URL>` to the link, or fill "code-server URL" in Settings, so that clicking a session can focus its Chrome window.
+Run `mudod install --code-server <url>` on the server, then open the printed `mudo://add?...` link on the Mac (or paste it in Settings). Without `--code-server`, fill "code-server URL" in Settings so that clicking a session can focus its Chrome window.
 
 The devbox daemon is reachable on the LAN at `http://192.168.1.10:7879` (Tailscale egress from that server is blocked by Cloudflare WARP).
 
@@ -37,4 +39,4 @@ The devbox daemon is reachable on the LAN at `http://192.168.1.10:7879` (Tailsca
 - First click on a session asks for Automation access to Google Chrome. If denied, MuDo opens a new Chrome window instead, and the menu shows "Allow MuDo to control Chrome…".
 - Tokens are stored in the Keychain and read once per server per launch (then cached in memory).
 - With an ad-hoc signature (no "MuDo Dev" identity), each rebuild changes the signature, so macOS asks again for Keychain access and for Automation access to Google Chrome. Run `scripts/make-signing-identity` once to stop that.
-- The `mudo://add?...` link printed by `mudod install` has no `code_server`, so clicking a session would have no Chrome window to focus (MuDo opens Settings instead). Append `&code_server=<url-encoded URL>` to the link before opening it; for devbox: `&code_server=https%3A%2F%2Fcode.example.com`.
+- If the server has no code-server URL (link printed without `--code-server` and the Settings field empty), clicking a session has no Chrome window to focus and MuDo opens Settings instead. For devbox: `mudod install --code-server https://code.example.com`.

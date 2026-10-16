@@ -2,6 +2,8 @@
 
 Server-side daemon for MuDo. It receives Claude Code / Kiro CLI hook calls and streams session state to the MuDo Mac app.
 
+Overview, full install steps and troubleshooting: see the [top-level README](../README.md).
+
 ## Build
 
 ```bash
@@ -22,7 +24,7 @@ ssh devbox '/tmp/mudod install'
 - enables the `mudod` systemd user service
 - adds hooks to `~/.claude/settings.json` (backup: `settings.json.mudo-bak-*`)
 - writes `~/.kiro/hooks/mudo.json`
-- prints a `mudo://add?...` link; open it on the Mac to add the server
+- prints a `mudo://add?...` link; open it on the Mac to add the server. `mudod install --code-server <url>` adds the code-server URL to the link. If `api_addr` is a wildcard such as `[::]:7879`, the link uses the Tailscale IPv6 address (then IPv4)
 
 If it warns about lingering, run the printed `sudo loginctl enable-linger <user>` so the daemon survives logout.
 
