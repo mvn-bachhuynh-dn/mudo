@@ -30,9 +30,22 @@ public enum TabMatcher {
         if let hit = candidates.first(where: { folder(of: $0.url).map(trimSlash) == want }) {
             return hit
         }
-        let middle = " \u{2014} \(project) \u{2014} "
-        let leading = "\(project) \u{2014} "
-        return candidates.first { $0.title.contains(middle) || $0.title.hasPrefix(leading) }
+        let ancestors = candidates.compactMap { tab -> (ChromeTab, Int)? in
+            guard let f = folder(of: tab.url).map(trimSlash), !f.isEmpty, want.hasPrefix(f + "/") else { return nil }
+            return (tab, f.count)
+        }
+        if let deepest = ancestors.max(by: { $0.1 < $1.1 }) { return deepest.0 }
+        let separators = [" - ", " \u{2014} "]
+        return candidates.first { tab in
+            separators.contains { sep in
+                tab.title.contains("\(sep)\(project)\(sep)") || tab.title.hasPrefix("\(project)\(sep)")
+            }
+        }
+    }
+
+    public static func isUnder(codeServer: URL, _ tabURL: String) -> Bool {
+        guard let base = URLComponents(url: codeServer, resolvingAgainstBaseURL: false) else { return false }
+        return isUnder(base, tabURL)
     }
 
     static func isUnder(_ base: URLComponents, _ text: String) -> Bool {

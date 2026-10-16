@@ -54,6 +54,54 @@ import Testing
         #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/home/steve/api", project: "api") == tabs[0])
     }
 
+    @Test func titleFallbackHyphenSeparator() {
+        let tabs = [
+            tab(1, 1, "http://100.64.0.10:8080/", "README.md - web - code-server"),
+            tab(1, 2, "http://100.64.0.10:8080/", "main.go - api - code-server"),
+        ]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/home/steve/api", project: "api") == tabs[1])
+    }
+
+    @Test func titleFallbackHyphenWithoutOpenEditor() {
+        let tabs = [tab(1, 1, "http://100.64.0.10:8080/", "api - code-server")]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/home/steve/api", project: "api") == tabs[0])
+    }
+
+    @Test func titleFallbackHyphenWithDirtyMarker() {
+        let tabs = [tab(1, 1, "http://100.64.0.10:8080/", "\u{25CF} main.go - api - code-server")]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/home/steve/api", project: "api") == tabs[0])
+    }
+
+    @Test func ancestorFolderMatchesSubdirectoryCwd() {
+        let tabs = [
+            tab(1, 1, "http://100.64.0.10:8080/?folder=/other"),
+            tab(2, 1, "http://100.64.0.10:8080/?folder=/a/must-do"),
+        ]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/a/must-do/app/Sources", project: "Sources") == tabs[1])
+    }
+
+    @Test func deepestAncestorWins() {
+        let tabs = [
+            tab(1, 1, "http://100.64.0.10:8080/?folder=/a"),
+            tab(2, 1, "http://100.64.0.10:8080/?folder=/a/must-do/app"),
+            tab(3, 1, "http://100.64.0.10:8080/?folder=/a/must-do"),
+        ]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/a/must-do/app/Sources", project: "Sources") == tabs[1])
+    }
+
+    @Test func prefixWithoutComponentBoundaryDoesNotMatch() {
+        let tabs = [tab(1, 1, "http://100.64.0.10:8080/?folder=/a/must")]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/a/must-do", project: "must-do") == nil)
+    }
+
+    @Test func exactFolderBeatsAncestor() {
+        let tabs = [
+            tab(1, 1, "http://100.64.0.10:8080/?folder=/a/must-do"),
+            tab(2, 1, "http://100.64.0.10:8080/?folder=/a/must-do/app"),
+        ]
+        #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/a/must-do/app", project: "app") == tabs[1])
+    }
+
     @Test func titleOnTabOutsideCodeServerIgnored() {
         let tabs = [tab(1, 1, "https://github.com/x/api", "main.go — api — code-server")]
         #expect(TabMatcher.match(tabs: tabs, codeServer: cs, cwd: "/home/steve/api", project: "api") == nil)
