@@ -40,18 +40,21 @@ public final class ServerConnection {
     private let transport: any EventTransport
     private let sleep: @Sendable (Duration) async throws -> Void
     private let onAckRetry: @MainActor ([SessionKey]) -> Void
+    private let onSkip: @MainActor (_ event: String, _ error: any Error) -> Void
     private var backoff = Backoff()
     private var task: Task<Void, Never>?
 
     public init(config: ServerConfig, token: String, store: SessionStore, transport: any EventTransport,
                 sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
-                onAckRetry: @escaping @MainActor ([SessionKey]) -> Void = { _ in }) {
+                onAckRetry: @escaping @MainActor ([SessionKey]) -> Void = { _ in },
+                onSkip: @escaping @MainActor (_ event: String, _ error: any Error) -> Void = { _, _ in }) {
         self.config = config
         self.token = token
         self.store = store
         self.transport = transport
         self.sleep = sleep
         self.onAckRetry = onAckRetry
+        self.onSkip = onSkip
     }
 
     public var streamURL: URL {
@@ -84,9 +87,15 @@ public final class ServerConnection {
             do {
                 for try await event in transport.events(url: streamURL, token: token) {
                     if Task.isCancelled { return }
-                    guard let message = try? StreamMessage.decode(event: event.event, data: event.data) else {
+                    // Spec 6.7: log and skip malformed messages; unknown event names are skipped silently.
+                    let decoded: StreamMessage?
+                    do {
+                        decoded = try StreamMessage.decode(event: event.event, data: event.data)
+                    } catch {
+                        onSkip(event.event, error)
                         continue
                     }
+                    guard let message = decoded else { continue }
                     if !connected {
                         connected = true
                         backoff.reset()

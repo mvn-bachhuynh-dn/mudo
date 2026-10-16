@@ -162,6 +162,23 @@ import Testing
         #expect(store.pill.offline)
     }
 
+    @Test func pillNotOfflineWhileConnecting() {
+        let store = SessionStore(clock: { Date() })
+        store.setServers([makeServer("a")])
+        #expect(store.pill.offline == false)
+    }
+
+    @Test func pillOfflineWhenEveryServerOfflineOrUnauthorized() {
+        let store = SessionStore(clock: { Date() })
+        let a = makeServer("a"), b = makeServer("b")
+        store.setServers([a, b])
+        store.setStatus(.offline, for: a.id)
+        store.setStatus(.connecting, for: b.id)
+        #expect(store.pill.offline == false)
+        store.setStatus(.unauthorized, for: b.id)
+        #expect(store.pill.offline)
+    }
+
     @Test func rowCarriesServerName() {
         let clock = TestClock(t0)
         let (store, _) = connectedStore(clock, [makeSession("1", .idle, since: t0)])

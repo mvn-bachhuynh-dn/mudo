@@ -59,11 +59,12 @@ func eventually(_ condition: () -> Bool) async -> Bool {
     static let upsert2 = SSEEvent(event: "upsert", data: #"{"server_now":"2026-10-16T09:49:45Z","session":{"id":"2","agent":"kiro","host":"h","cwd":"/y","project":"y","state":"running","state_since":"2026-10-16T09:49:45Z","last_prompt":""}}"#)
 
     private func make(_ transport: FakeTransport, _ sleeps: SleepRecorder,
-                      onAckRetry: @escaping @MainActor ([SessionKey]) -> Void = { _ in }) -> (SessionStore, ServerConnection) {
+                      onAckRetry: @escaping @MainActor ([SessionKey]) -> Void = { _ in },
+                      onSkip: @escaping @MainActor (String, any Error) -> Void = { _, _ in }) -> (SessionStore, ServerConnection) {
         let store = SessionStore(clock: { Date() })
         store.setServers([server])
         let conn = ServerConnection(config: server, token: "tok", store: store, transport: transport,
-                                    sleep: { sleeps.record($0) }, onAckRetry: onAckRetry)
+                                    sleep: { sleeps.record($0) }, onAckRetry: onAckRetry, onSkip: onSkip)
         return (store, conn)
     }
 
@@ -141,6 +142,21 @@ func eventually(_ condition: () -> Bool) async -> Bool {
         let (store, conn) = make(transport, SleepRecorder())
         conn.start()
         #expect(await eventually { store.session(SessionKey(serverID: server.id, sessionID: "2")) != nil })
+        conn.stop()
+    }
+
+    @Test func malformedMessageReportedUnknownEventNot() async {
+        var skipped: [String] = []
+        let transport = FakeTransport([.events([
+            Self.snapshot,
+            SSEEvent(event: "upsert", data: "{"),
+            SSEEvent(event: "mystery", data: "{}"),
+            Self.upsert2,
+        ], end: nil)])
+        let (store, conn) = make(transport, SleepRecorder(), onSkip: { event, _ in skipped.append(event) })
+        conn.start()
+        #expect(await eventually { store.session(SessionKey(serverID: server.id, sessionID: "2")) != nil })
+        #expect(skipped == ["upsert"])
         conn.stop()
     }
 

@@ -240,6 +240,6 @@ extension SessionStore {
             waiting: all.count(where: { $0.bucket == .waiting }),
             done: all.count(where: { $0.bucket == .done || $0.bucket == .stale }),
             blinking: all.contains(where: \.blinking),
-            offline: serverStates.values.allSatisfy { $0.status != .connected })
+            offline: serverStates.values.allSatisfy { $0.status == .offline || $0.status == .unauthorized })
     }
 }
