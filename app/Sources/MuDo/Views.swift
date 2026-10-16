@@ -17,6 +17,8 @@ struct RootView: View {
         .padding(8)
         .frame(width: panel.isExpanded ? 320 : nil, alignment: .leading)
         .glassEffect(.regular, in: .rect(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
+        .padding(12) // room so the shadow is not clipped by the panel bounds
         .fixedSize()
         .onGeometryChange(for: CGSize.self) { $0.size } action: { panel.contentSizeChanged($0) }
     }
@@ -27,29 +29,36 @@ struct PillView: View {
     let hasServers: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             if !hasServers {
-                Label("Add a server", systemImage: "plus.circle").foregroundStyle(.secondary)
+                chip("plus.circle", "Add a server", fill: Color.secondary.opacity(0.25), fg: .secondary)
             } else if summary.offline {
-                Label("offline", systemImage: "wifi.slash").foregroundStyle(.secondary)
+                chip("wifi.slash", "offline", fill: Color.secondary.opacity(0.25), fg: .secondary)
             } else {
                 count("circle.fill", summary.running, .blue)
                 count("hourglass.circle.fill", summary.waiting, .orange)
                 count("checkmark.circle.fill", summary.done, .green)
             }
         }
-        .font(.system(size: 12, weight: .semibold).monospacedDigit())
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
         .blink(summary.blinking)
     }
 
     private func count(_ symbol: String, _ n: Int, _ color: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: symbol).foregroundStyle(color)
-            Text("\(n)")
+        chip(symbol, "\(n)", fill: n == 0 ? Color.secondary.opacity(0.25) : color,
+             fg: n == 0 ? .secondary : .white)
+    }
+
+    private func chip(_ symbol: String, _ text: String, fill: Color, fg: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).font(.system(size: 14, weight: .semibold))
+            Text(text).font(.system(size: 15, weight: .semibold, design: .rounded).monospacedDigit())
         }
-        .opacity(n == 0 ? 0.4 : 1)
+        .foregroundStyle(fg)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(fill, in: Capsule())
     }
 }
 
