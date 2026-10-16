@@ -126,3 +126,13 @@ func TestRunLogsBadJSON(t *testing.T) {
 		t.Fatalf("log = %q", data)
 	}
 }
+
+func TestRunRecoversFromPanic(t *testing.T) {
+	o := options(t, "http://127.0.0.1:1", `{"hook_event_name":"UserPromptSubmit","session_id":"s1","cwd":"/w"}`)
+	o.Client = nil
+	Run(o)
+	data, _ := os.ReadFile(o.LogPath)
+	if !strings.Contains(string(data), "panic") {
+		t.Fatalf("log = %q, want panic entry", data)
+	}
+}

@@ -80,7 +80,8 @@ func (s *Store) Load() error {
 	}
 	var list []model.Session
 	if err := json.Unmarshal(data, &list); err != nil {
-		return err
+		bad := s.opts.Path + ".corrupt-" + s.now().Format("20060102-150405")
+		return os.Rename(s.opts.Path, bad)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -174,7 +175,18 @@ func (s *Store) Flush() error {
 		return err
 	}
 	tmp := s.opts.Path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err == nil {
+		err = f.Sync()
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
 		return err
 	}
 	return os.Rename(tmp, s.opts.Path)
@@ -197,7 +209,9 @@ func (s *Store) Run(ctx context.Context, sweepEvery time.Duration, onErr func(er
 		case <-ticker.C:
 			s.Sweep()
 		case <-s.dirty:
-			debounce = time.After(200 * time.Millisecond)
+			if debounce == nil {
+				debounce = time.After(200 * time.Millisecond)
+			}
 		case <-debounce:
 			debounce = nil
 			if err := s.Flush(); err != nil {

@@ -31,12 +31,12 @@ type Result struct {
 func SystemdUnit(bin string) string {
 	return fmt.Sprintf(`[Unit]
 Description=MuDo agent session daemon
-After=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=%s serve
 Restart=always
-RestartSec=2
+RestartSec=5
 
 [Install]
 WantedBy=default.target

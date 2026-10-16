@@ -199,3 +199,24 @@ func TestRunWritesStateAfterChange(t *testing.T) {
 	cancel()
 	<-done
 }
+
+func TestLoadQuarantinesCorruptState(t *testing.T) {
+	for name, content := range map[string]string{"empty": "", "garbage": "{garbage"} {
+		t.Run(name, func(t *testing.T) {
+			s := newStore(t, &clock{now: t0}, nil)
+			if err := os.WriteFile(s.opts.Path, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Load(); err != nil {
+				t.Fatalf("Load = %v, want nil", err)
+			}
+			if n := len(s.Snapshot()); n != 0 {
+				t.Fatalf("snapshot has %d sessions", n)
+			}
+			m, _ := filepath.Glob(s.opts.Path + ".corrupt-*")
+			if len(m) != 1 {
+				t.Fatalf("corrupt files = %v", m)
+			}
+		})
+	}
+}

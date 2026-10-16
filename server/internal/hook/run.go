@@ -34,6 +34,11 @@ type Options struct {
 // stdout or stderr: Kiro adds hook stdout to the agent context and a
 // non-zero exit blocks the prompt. Problems go to the log file.
 func Run(o Options) {
+	defer func() {
+		if r := recover(); r != nil {
+			logf(o.LogPath, "panic: %v", r)
+		}
+	}()
 	payload, err := io.ReadAll(io.LimitReader(o.Stdin, maxPayload))
 	if err != nil {
 		logf(o.LogPath, "read stdin: %v", err)

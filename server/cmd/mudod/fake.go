@@ -30,8 +30,9 @@ func runFake(args []string) error {
 	go fake.Drive(ctx, st, *step)
 
 	srv := &http.Server{
-		Addr:        *addr,
-		BaseContext: func(net.Listener) context.Context { return ctx },
+		Addr:              *addr,
+		ReadHeaderTimeout: 10 * time.Second,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 		Handler: api.Client(st, api.ClientOptions{
 			Token: *token, Host: "fake", Version: version, Started: time.Now(), Now: time.Now,
 			PingEvery: 15 * time.Second, SubBuffer: 64,

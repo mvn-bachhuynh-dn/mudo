@@ -237,11 +237,14 @@ func containsCommand(groups []any, command string) bool {
 }
 
 func writeJSON(path string, v any, perm os.FileMode) error {
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
 		return err
 	}
-	return writeFile(path, append(data, '\n'), perm)
+	return writeFile(path, buf.Bytes(), perm)
 }
 
 // writeFile replaces path atomically, creating parent directories.

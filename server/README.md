@@ -53,4 +53,4 @@ mudod fake --addr 0.0.0.0:7879 --token fake-token --step 3s
 ~/.local/bin/mudod uninstall
 ```
 
-Removes the systemd unit and MuDo's hooks. Config, state and the binary stay. Before removing the hooks, `uninstall` also backs up `~/.claude/settings.json` to `settings.json.mudo-bak-*`, and install keeps that file's existing permissions.
+Removes the systemd unit and MuDo's hooks. Config, state and the binary stay. When `uninstall` removes MuDo hooks it first backs up `~/.claude/settings.json` to `settings.json.mudo-bak-*`, and install keeps that file's existing permissions.

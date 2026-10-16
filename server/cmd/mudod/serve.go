@@ -55,15 +55,23 @@ func runServe(args []string) error {
 
 	base := func(net.Listener) context.Context { return ctx }
 	ingest := &http.Server{Addr: cfg.IngestAddr, Handler: api.Ingest(st), BaseContext: base}
-	client := &http.Server{Addr: cfg.APIAddr, BaseContext: base, Handler: api.Client(st, api.ClientOptions{
+	client := &http.Server{Addr: cfg.APIAddr, BaseContext: base, ReadHeaderTimeout: 10 * time.Second, Handler: api.Client(st, api.ClientOptions{
 		Token: cfg.Token, Host: host, Version: version, Started: time.Now(), Now: time.Now,
 		PingEvery: 15 * time.Second, SubBuffer: 64,
 	})}
 
 	errc := make(chan error, 2)
-	for _, srv := range []*http.Server{ingest, client} {
-		go func(s *http.Server) { errc <- s.ListenAndServe() }(srv)
+	apiLn, err := listenFreebind(ctx, cfg.APIAddr)
+	if err != nil {
+		stop()
+		<-stored
+		if err := st.Flush(); err != nil {
+			logger.Printf("persist: %v", err)
+		}
+		return err
 	}
+	go func() { errc <- ingest.ListenAndServe() }()
+	go func() { errc <- client.Serve(apiLn) }()
 	logger.Printf("ingest on %s, api on %s", cfg.IngestAddr, cfg.APIAddr)
 
 	var runErr error

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -290,5 +291,23 @@ func TestKiroHooks(t *testing.T) {
 		if h.Trigger != triggers[i] || h.Action.Type != "command" || h.Action.Command != "/x/mudod hook --agent kiro" || h.Timeout != 2 || !h.Enabled {
 			t.Errorf("hook %d = %+v", i, h)
 		}
+	}
+}
+
+func TestMergeKeepsHTMLCharsLiteral(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"permissions":{"allow":["Bash(a && b)"]}}`
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := MergeClaudeSettings(path, cmd, t0); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if !strings.Contains(string(data), "Bash(a && b)") {
+		t.Fatalf("&& was escaped: %s", data)
+	}
+	if !strings.HasSuffix(string(data), "}\n") || strings.HasSuffix(string(data), "\n\n") {
+		t.Fatalf("bad trailing newline: %q", data[len(data)-3:])
 	}
 }
