@@ -1,0 +1,8 @@
+server/dist/
+temp/
+.DS_Store
+app/build/
+xcuserdata/
+DerivedData/
+.superpowers/
+.claude/settings.local.json
