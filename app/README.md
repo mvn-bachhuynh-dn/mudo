@@ -24,3 +24,5 @@ The devbox daemon is reachable on the LAN at `http://192.168.1.10:7879` (Tailsca
 
 - First click on a session asks for Automation access to Google Chrome. If denied, MuDo opens a new Chrome window instead, and the menu shows "Allow MuDo to control Chrome…".
 - Tokens are stored in the Keychain. Each rebuild changes the ad-hoc signature, so macOS may ask once to allow Keychain access after an update.
+- The new ad-hoc signature also makes macOS ask again for Automation access to Google Chrome after each rebuild.
+- The `mudo://add?...` link printed by `mudod install` has no `code_server`, so clicking a session would have no Chrome window to focus (MuDo opens Settings instead). Append `&code_server=<url-encoded URL>` to the link before opening it; for devbox: `&code_server=https%3A%2F%2Fcode.example.com`.
