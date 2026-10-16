@@ -2,6 +2,7 @@ import AppKit
 import MuDoCore
 import Network
 import Observation
+import os
 
 @MainActor
 @Observable
@@ -9,6 +10,8 @@ final class AppModel {
     let settings: AppSettings
     let store = SessionStore()
     private(set) var automationDenied = false
+    /// Called when a clicked session's server has no code-server URL to focus.
+    @ObservationIgnored var onNeedsCodeServer: (() -> Void)?
 
     @ObservationIgnored private let focuser = ChromeTabFocuser()
     @ObservationIgnored private let api = APIClient()
@@ -17,10 +20,12 @@ final class AppModel {
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private let pathMonitor = NWPathMonitor()
     @ObservationIgnored private var pathSatisfied: Bool?
+    private static let streamLog = Logger(subsystem: "dev.steve.MuDo", category: "stream")
 
     init(settings: AppSettings) {
         self.settings = settings
         focuser.onAutomationDenied = { [weak self] in self?.automationDenied = true }
+        focuser.onAutomationAllowed = { [weak self] in self?.automationDenied = false }
         applySettings()
         startTimer()
         watchWakeAndNetwork()
@@ -32,18 +37,27 @@ final class AppModel {
         store.snoozeFor = TimeInterval(settings.snoozeMinutes * 60)
         store.setServers(settings.servers)
         let wanted = Dictionary(uniqueKeysWithValues: settings.servers.map { ($0.id, $0) })
+        // nil = the Keychain read failed: keep the token we already use instead of reconnecting.
+        var current: [UUID: String] = [:]
+        for config in settings.servers {
+            current[config.id] = settings.token(for: config.id) ?? tokens[config.id] ?? ""
+        }
         for (id, connection) in connections {
-            if wanted[id] != connection.config || settings.token(for: id) != tokens[id] {
+            if wanted[id] != connection.config || current[id] != tokens[id] {
                 connection.stop()
                 connections[id] = nil
             }
         }
         for config in settings.servers where connections[config.id] == nil {
-            let token = settings.token(for: config.id)
+            let token = current[config.id] ?? ""
             tokens[config.id] = token
+            let name = config.name
             let connection = ServerConnection(
                 config: config, token: token, store: store, transport: URLSessionTransport(),
-                onAckRetry: { [weak self] keys in self?.retryAcks(keys) })
+                onAckRetry: { [weak self] keys in self?.retryAcks(keys) },
+                onSkip: { event, error in
+                    Self.streamLog.error("Skipped \(event, privacy: .public) message from \(name, privacy: .public): \(String(describing: error), privacy: .public)")
+                })
             connections[config.id] = connection
             connection.start()
         }
@@ -64,6 +78,8 @@ final class AppModel {
         }
         if let codeServer = config.codeServerURL {
             focuser.focus(codeServer: codeServer, cwd: row.session.cwd, project: row.session.project)
+        } else {
+            onNeedsCodeServer?()
         }
     }
 

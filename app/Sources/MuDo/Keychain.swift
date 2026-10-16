@@ -13,14 +13,19 @@ enum Keychain {
         ]
     }
 
-    static func read(account: String) -> String? {
+    /// The stored value with `errSecSuccess`; otherwise nil and the failing status
+    /// (`errSecItemNotFound` when there is no item).
+    static func read(account: String) -> (value: String?, status: OSStatus) {
         var q = query(account)
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?
-        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess,
-              let data = out as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        let status = SecItemCopyMatching(q as CFDictionary, &out)
+        guard status == errSecSuccess else { return (nil, status) }
+        guard let data = out as? Data, let value = String(data: data, encoding: .utf8) else {
+            return (nil, errSecDecode)
+        }
+        return (value, errSecSuccess)
     }
 
     /// Returns `errSecSuccess` on success, otherwise the failing status.

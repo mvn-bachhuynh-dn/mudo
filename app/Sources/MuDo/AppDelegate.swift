@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let model = AppModel(settings: AppSettings())
         self.model = model
         settingsWindow = SettingsWindowController(model: model)
+        model.onNeedsCodeServer = { [weak self] in self?.settingsWindow?.show() }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

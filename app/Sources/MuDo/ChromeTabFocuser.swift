@@ -6,6 +6,8 @@ final class ChromeTabFocuser {
     static let chromeBundleID = "com.google.Chrome"
 
     var onAutomationDenied: (() -> Void)?
+    /// Called whenever a script runs successfully, i.e. Automation access is granted.
+    var onAutomationAllowed: (() -> Void)?
     private let queue = DispatchQueue(label: "dev.steve.MuDo.applescript")
 
     private enum ScriptResult<T: Sendable>: Sendable {
@@ -67,7 +69,7 @@ final class ChromeTabFocuser {
 
     private func run<T: Sendable>(_ source: String,
                                   parse: @escaping @Sendable (NSAppleEventDescriptor) -> T) async -> ScriptResult<T> {
-        await withCheckedContinuation { continuation in
+        let result: ScriptResult<T> = await withCheckedContinuation { continuation in
             queue.async {
                 guard let script = NSAppleScript(source: source) else {
                     continuation.resume(returning: .failed)
@@ -83,6 +85,8 @@ final class ChromeTabFocuser {
                 continuation.resume(returning: .ok(parse(output)))
             }
         }
+        if case .ok = result { onAutomationAllowed?() }
+        return result
     }
 
     nonisolated static func parseTabs(_ list: NSAppleEventDescriptor) -> [ChromeTab] {

@@ -96,17 +96,20 @@ struct ServerEditor: View {
     @State private var daemon = ""
     @State private var codeServer = ""
     @State private var token = ""
-    @State private var invalid = false
+    @State private var error: String?
+    /// The stored token could not be read; an empty field then means "keep the stored token".
+    @State private var tokenUnreadable = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("Name", text: $name)
             TextField("Daemon URL", text: $daemon, prompt: Text("http://100.x.y.z:7879"))
             TextField("code-server URL", text: $codeServer, prompt: Text("http://100.x.y.z:8080"))
-            SecureField("Token", text: $token)
+            SecureField("Token", text: $token,
+                        prompt: tokenUnreadable ? Text("Unreadable — type a new token to replace it") : nil)
             HStack {
-                if invalid {
-                    Text("Daemon URL must be http(s)://host:port").font(.caption).foregroundStyle(.red)
+                if let error {
+                    Text(error).font(.caption).foregroundStyle(.red)
                 }
                 Spacer()
                 Button("Remove", role: .destructive) {
@@ -118,26 +121,41 @@ struct ServerEditor: View {
         }
         .padding(.vertical, 4)
         .onAppear(perform: load)
+        .onChange(of: server) { load() }
     }
 
     private func load() {
         name = server.name
         daemon = server.daemonURL.absoluteString
         codeServer = server.codeServerURL?.absoluteString ?? ""
-        token = model.settings.token(for: server.id)
+        let stored = model.settings.token(for: server.id)
+        tokenUnreadable = stored == nil
+        token = stored ?? ""
+        error = nil
     }
 
     private func save() {
         guard let daemonURL = AddLink.httpURL(daemon) else {
-            invalid = true
+            error = "Daemon URL must be http(s)://host:port"
             return
         }
-        invalid = false
+        let codeServerText = codeServer.trimmingCharacters(in: .whitespacesAndNewlines)
+        var codeServerURL: URL?
+        if !codeServerText.isEmpty {
+            guard let url = AddLink.httpURL(codeServerText) else {
+                error = "code-server URL must be http(s)://host[:port]"
+                return
+            }
+            codeServerURL = url
+        }
+        error = nil
         var updated = server
         updated.name = name.isEmpty ? server.name : name
         updated.daemonURL = daemonURL
-        updated.codeServerURL = AddLink.httpURL(codeServer)
-        model.settings.update(updated, token: token)
+        updated.codeServerURL = codeServerURL
+        let keepStoredToken = tokenUnreadable && token.isEmpty
+        model.settings.update(updated, token: keepStoredToken ? nil : token)
+        if !keepStoredToken { tokenUnreadable = false }
         model.applySettings()
     }
 }

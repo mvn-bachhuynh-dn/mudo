@@ -16,7 +16,7 @@ final class AppSettings {
     @ObservationIgnored private let defaults: UserDefaults
 
     private(set) var servers: [ServerConfig]
-    /// Set when the last token save failed; nil after a successful one.
+    /// Set when a token save or read failed; nil after a successful save.
     private(set) var keychainError: String?
     var staleMinutes: Int {
         didSet { defaults.set(staleMinutes, forKey: Key.stale) }
@@ -35,8 +35,13 @@ final class AppSettings {
         snoozeMinutes = snooze > 0 ? snooze : 10
     }
 
-    func token(for id: UUID) -> String {
-        Keychain.read(account: id.uuidString) ?? ""
+    /// The server's token; "" when none is stored; nil when the Keychain read failed.
+    func token(for id: UUID) -> String? {
+        let (value, status) = Keychain.read(account: id.uuidString)
+        if status == errSecSuccess, let value { return value }
+        if status == errSecItemNotFound { return "" }
+        keychainError = "Could not read the token from the Keychain (OSStatus \(status))."
+        return nil
     }
 
     func setToken(_ token: String, for id: UUID) {
@@ -63,10 +68,11 @@ final class AppSettings {
         return config
     }
 
-    func update(_ config: ServerConfig, token: String) {
+    /// A nil token leaves the stored token untouched.
+    func update(_ config: ServerConfig, token: String?) {
         guard let i = servers.firstIndex(where: { $0.id == config.id }) else { return }
         servers[i] = config
-        setToken(token, for: config.id)
+        if let token { setToken(token, for: config.id) }
         save()
     }
 
