@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Sync app/ to the Mac and run a command there, e.g. scripts/on-mac swift test
+set -euo pipefail
+host="${MUDO_MAC:?set MUDO_MAC=user@host (SSH target of the build Mac)}"
+here="$(cd "$(dirname "$0")/.." && pwd)"
+rsync -az --delete --exclude .build --exclude build "$here/" "$host:mudo-app/"
+# The build Mac has full Xcode, but xcode-select points at the Command Line Tools,
+# which lack the Swift Testing module.
+ssh "$host" "export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer; cd mudo-app && $*"
