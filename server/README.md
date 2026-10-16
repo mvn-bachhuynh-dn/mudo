@@ -26,6 +26,15 @@ ssh devbox '/tmp/mudod install'
 
 If it warns about lingering, run the printed `sudo loginctl enable-linger <user>` so the daemon survives logout.
 
+If `install` fails with `Failed to connect to bus`, the user has no systemd user manager (common when the shell comes from code-server run as a system service). Enable lingering, then re-run with the runtime dir set:
+
+```bash
+sudo loginctl enable-linger "$USER"
+XDG_RUNTIME_DIR=/run/user/$(id -u) ~/.local/bin/mudod install
+```
+
+Kiro hooks fire only in the interactive `kiro-cli chat` TUI, not with `--no-interactive`.
+
 Running `install` again upgrades the binary and keeps the token.
 
 ## Check it works
