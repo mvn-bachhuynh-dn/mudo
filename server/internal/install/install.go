@@ -92,7 +92,7 @@ func Uninstall(o Options) error {
 		return err
 	}
 	_, _ = o.Exec("systemctl", "--user", "daemon-reload")
-	if _, err := RemoveClaudeHooks(p.ClaudeSettings, p.Bin+" hook --agent claude"); err != nil {
+	if _, err := RemoveClaudeHooks(p.ClaudeSettings, p.Bin+" hook --agent claude", o.Now()); err != nil {
 		return fmt.Errorf("claude hooks: %w", err)
 	}
 	if err := os.Remove(p.KiroHooks); err != nil && !errors.Is(err, fs.ErrNotExist) {

@@ -90,7 +90,7 @@ func TestRemoveClaudeHooksKeepsOthers(t *testing.T) {
 	if _, err := MergeClaudeSettings(path, cmd, t0); err != nil {
 		t.Fatal(err)
 	}
-	changed, err := RemoveClaudeHooks(path, cmd)
+	changed, err := RemoveClaudeHooks(path, cmd, t0)
 	if err != nil || !changed {
 		t.Fatalf("changed=%v err=%v", changed, err)
 	}
@@ -105,9 +105,163 @@ func TestRemoveClaudeHooksKeepsOthers(t *testing.T) {
 }
 
 func TestRemoveClaudeHooksMissingFile(t *testing.T) {
-	changed, err := RemoveClaudeHooks(filepath.Join(t.TempDir(), "none.json"), cmd)
+	changed, err := RemoveClaudeHooks(filepath.Join(t.TempDir(), "none.json"), cmd, t0)
 	if err != nil || changed {
 		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+}
+
+func fileMode(t *testing.T, path string) os.FileMode {
+	t.Helper()
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fi.Mode().Perm()
+}
+
+func TestMergePreservesModeAndBackupMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(`{"model":"opus"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := MergeClaudeSettings(path, cmd, t0); err != nil {
+		t.Fatal(err)
+	}
+	if m := fileMode(t, path); m != 0o600 {
+		t.Fatalf("settings mode = %v, want 0600", m)
+	}
+	backups, _ := filepath.Glob(path + ".mudo-bak-*")
+	if len(backups) != 1 {
+		t.Fatalf("backups = %v", backups)
+	}
+	if m := fileMode(t, backups[0]); m != 0o600 {
+		t.Fatalf("backup mode = %v, want 0600", m)
+	}
+}
+
+func TestMergeNewFileIsPrivate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if _, err := MergeClaudeSettings(path, cmd, t0); err != nil {
+		t.Fatal(err)
+	}
+	if m := fileMode(t, path); m != 0o600 {
+		t.Fatalf("new settings mode = %v, want 0600", m)
+	}
+}
+
+func TestMergeKeepsSymlink(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "dotfiles", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte(`{"model":"opus"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := MergeClaudeSettings(link, cmd, t0); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Lstat(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("symlink replaced by %v", fi.Mode())
+	}
+	got := readSettings(t, target)
+	if got["model"] != "opus" || !containsCommand(got["hooks"].(map[string]any)["Stop"].([]any), cmd) {
+		t.Fatalf("target not updated: %v", got)
+	}
+	if backups, _ := filepath.Glob(target + ".mudo-bak-*"); len(backups) != 1 {
+		t.Fatalf("backups next to target = %v", backups)
+	}
+}
+
+func TestRemoveClaudeHooksKeepsUserData(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"Stop":[{"hooks":[]},{"matcher":"x"},{"hooks":[{"type":"command","command":"` + cmd + `"}]}],"Other":[]}}`
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := RemoveClaudeHooks(path, cmd, t0)
+	if err != nil || !changed {
+		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+	hooks := readSettings(t, path)["hooks"].(map[string]any)
+	stop, ok := hooks["Stop"].([]any)
+	if !ok || len(stop) != 2 {
+		t.Fatalf("Stop = %v", hooks["Stop"])
+	}
+	if g := stop[0].(map[string]any); g["hooks"] == nil || len(g["hooks"].([]any)) != 0 {
+		t.Fatalf("user group with empty hooks was altered: %v", g)
+	}
+	if g := stop[1].(map[string]any); g["matcher"] != "x" {
+		t.Fatalf("group without hooks was altered: %v", g)
+	}
+	other, ok := hooks["Other"].([]any)
+	if !ok || len(other) != 0 {
+		t.Fatalf("unrelated event with [] was removed: %v", hooks)
+	}
+}
+
+func TestRemoveClaudeHooksBacksUp(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"` + cmd + `"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RemoveClaudeHooks(path, cmd, t0); err != nil {
+		t.Fatal(err)
+	}
+	backups, _ := filepath.Glob(path + ".mudo-bak-*")
+	if len(backups) != 1 {
+		t.Fatalf("backups = %v", backups)
+	}
+	if m := fileMode(t, backups[0]); m != 0o600 {
+		t.Fatalf("backup mode = %v, want 0600", m)
+	}
+	if data, _ := os.ReadFile(backups[0]); string(data) != existing {
+		t.Fatalf("backup content = %s", data)
+	}
+}
+
+func TestMergeRejectsWrongShapesWithoutWriting(t *testing.T) {
+	for _, body := range []string{`{"hooks":[]}`, `{"hooks":{"Stop":{}}}`} {
+		path := filepath.Join(t.TempDir(), "settings.json")
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := MergeClaudeSettings(path, cmd, t0); err == nil {
+			t.Errorf("%s: want error", body)
+		}
+		if got, _ := os.ReadFile(path); string(got) != body {
+			t.Errorf("%s: file changed to %s", body, got)
+		}
+		if backups, _ := filepath.Glob(path + ".mudo-bak-*"); len(backups) != 0 {
+			t.Errorf("%s: unexpected backup %v", body, backups)
+		}
+	}
+}
+
+func TestMergeNullFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte("null"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := MergeClaudeSettings(path, cmd, t0)
+	if err != nil || !changed {
+		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+	if _, ok := readSettings(t, path)["hooks"]; !ok {
+		t.Fatal("hooks not written")
 	}
 }
 
