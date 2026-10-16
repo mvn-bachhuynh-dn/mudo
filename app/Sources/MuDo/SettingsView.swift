@@ -14,15 +14,24 @@ final class SettingsWindowController {
 
     func show() {
         if window == nil {
-            let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model)))
+            // A grouped Form has almost no intrinsic height, so size the window explicitly.
+            let host = NSHostingController(rootView: SettingsView(model: model))
+            host.sizingOptions = [.preferredContentSize]
+            let w = NSWindow(contentViewController: host)
             w.title = "MuDo Settings"
-            w.styleMask = [.titled, .closable]
+            w.styleMask = [.titled, .closable, .resizable]
             w.isReleasedWhenClosed = false
+            w.contentMinSize = NSSize(width: 480, height: 460)
+            w.setContentSize(NSSize(width: 480, height: 560))
+            // MuDo is an accessory app: keep Settings above other apps' windows.
+            w.level = .floating
             w.center()
             window = w
         }
+        guard let window else { return }
         NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 }
 
@@ -59,7 +68,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480)
+        .frame(minWidth: 480, idealWidth: 480, minHeight: 460, idealHeight: 560)
         .onChange(of: settings.staleMinutes) { model.applySettings() }
         .onChange(of: settings.snoozeMinutes) { model.applySettings() }
         .onChange(of: launchAtLogin) { _, on in setLaunchAtLogin(on) }
