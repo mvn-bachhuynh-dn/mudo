@@ -55,7 +55,15 @@ func Run(o Options) {
 	if !ok {
 		return
 	}
-	ev.PID, ev.PIDStart = o.Proc.FindAgent(o.PPID, o.Agent)
+	var found bool
+	ev.PID, ev.PIDStart, found = o.Proc.FindAgent(o.PPID, o.Agent)
+	// The payload cwd drifts with the agent's `cd`; the agent process's own
+	// cwd is its launch directory. Trust it only for an agent found by name.
+	if found {
+		if cwd, err := o.Proc.Cwd(ev.PID); err == nil && cwd != "" {
+			ev.Cwd, ev.CwdFromProc = cwd, true
+		}
+	}
 	if ev.Cwd == "" {
 		ev.Cwd = o.Cwd
 	}

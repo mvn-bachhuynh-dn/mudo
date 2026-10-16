@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+// WriteFakeCwd points /proc/<pid>/cwd at target, like the real symlink.
+func WriteFakeCwd(root string, pid int, target string) error {
+	return os.Symlink(target, filepath.Join(root, strconv.Itoa(pid), "cwd"))
+}
+
 // WriteFakeProcess writes a minimal /proc/<pid>/{stat,cmdline} under root so
 // tests in any package can build a fake process tree.
 func WriteFakeProcess(root string, pid int, comm string, ppid int, start uint64, cmdline string) error {

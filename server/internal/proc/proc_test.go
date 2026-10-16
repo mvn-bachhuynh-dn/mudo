@@ -58,7 +58,10 @@ func TestFindAgent(t *testing.T) {
 		{"fallback to caller", 400, "kiro", 400, 40},
 	}
 	for _, c := range cases {
-		pid, start := fs.FindAgent(c.from, c.agent)
+		pid, start, found := fs.FindAgent(c.from, c.agent)
+		if wantFound := c.name != "fallback to caller"; found != wantFound {
+			t.Errorf("%s: found=%v, want %v", c.name, found, wantFound)
+		}
 		if pid != c.pid || start != c.startTime {
 			t.Errorf("%s: got %d/%d, want %d/%d", c.name, pid, start, c.pid, c.startTime)
 		}
@@ -66,8 +69,8 @@ func TestFindAgent(t *testing.T) {
 }
 
 func TestFindAgentMissingProcess(t *testing.T) {
-	pid, start := fakeTree(t).FindAgent(4242, "claude")
-	if pid != 4242 || start != 0 {
+	pid, start, found := fakeTree(t).FindAgent(4242, "claude")
+	if pid != 4242 || start != 0 || found {
 		t.Fatalf("got %d/%d", pid, start)
 	}
 }
@@ -92,5 +95,19 @@ func TestAlive(t *testing.T) {
 	}
 	if fs.Alive(300, 30) {
 		t.Error("zombie must not be alive")
+	}
+}
+
+func TestCwd(t *testing.T) {
+	fs := fakeTree(t)
+	if err := WriteFakeCwd(fs.Root, 300, "/home/u/proj"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := fs.Cwd(300)
+	if err != nil || got != "/home/u/proj" {
+		t.Fatalf("Cwd = %q, %v", got, err)
+	}
+	if _, err := fs.Cwd(200); err == nil {
+		t.Error("process without cwd link must error")
 	}
 }

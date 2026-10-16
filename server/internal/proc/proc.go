@@ -46,25 +46,30 @@ func (f FS) Stat(pid int) (Stat, error) {
 	return Stat{Comm: s[open+1 : end], State: fields[0], PPID: ppid, StartTime: start}, nil
 }
 
-// FindAgent walks up from pid `from` to the agent's own process. If none is
-// found it returns `from` itself.
-func (f FS) FindAgent(from int, agent string) (int, uint64) {
-	pid := from
+// Cwd returns the working directory of pid (the /proc/<pid>/cwd symlink).
+func (f FS) Cwd(pid int) (string, error) {
+	return os.Readlink(filepath.Join(f.Root, strconv.Itoa(pid), "cwd"))
+}
+
+// FindAgent walks up from pid `from` to the agent's own process and reports
+// found=true. If none is found it returns `from` itself with found=false.
+func (f FS) FindAgent(from int, agent string) (pid int, start uint64, found bool) {
+	pid = from
 	for i := 0; i < 16 && pid > 1; i++ {
 		st, err := f.Stat(pid)
 		if err != nil {
 			break
 		}
 		if f.isAgent(pid, st.Comm, agent) {
-			return pid, st.StartTime
+			return pid, st.StartTime, true
 		}
 		pid = st.PPID
 	}
 	st, err := f.Stat(from)
 	if err != nil {
-		return from, 0
+		return from, 0, false
 	}
-	return from, st.StartTime
+	return from, st.StartTime, false
 }
 
 // Alive reports whether pid exists, is not a zombie, and (when start is

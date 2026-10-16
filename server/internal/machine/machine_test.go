@@ -163,6 +163,17 @@ func TestCwdDriftIgnored(t *testing.T) {
 	}
 }
 
+func TestCwdFromProcCorrectsDriftedSession(t *testing.T) {
+	prev := session(model.StateRunning)
+	prev.Cwd, prev.Project = "/w/api/server", "server"
+	ev := event(model.EvTool)
+	ev.Cwd, ev.CwdFromProc = "/w/api", true
+	got, changed := Apply(prev, ev, "devbox", t0.Add(time.Minute))
+	if !changed || got.Cwd != "/w/api" || got.Project != "api" {
+		t.Fatalf("cwd=%q project=%q changed=%v", got.Cwd, got.Project, changed)
+	}
+}
+
 func TestEmptyCwdAdoptsFirstNonEmpty(t *testing.T) {
 	prev := session(model.StateIdle)
 	prev.Cwd, prev.Project = "", ""

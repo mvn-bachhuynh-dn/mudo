@@ -33,6 +33,9 @@ type Event struct {
 	Prompt    string    `json:"prompt,omitempty"`
 	PID       int       `json:"pid"`
 	PIDStart  uint64    `json:"pid_start"`
+	// CwdFromProc marks Cwd as read from the agent process (/proc/<pid>/cwd):
+	// the launch directory, immune to the agent cd-ing around.
+	CwdFromProc bool `json:"cwd_from_proc,omitempty"`
 }
 
 // Session is the daemon's view of one agent session.
