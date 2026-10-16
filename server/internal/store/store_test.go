@@ -220,3 +220,71 @@ func TestLoadQuarantinesCorruptState(t *testing.T) {
 		})
 	}
 }
+
+func newCwdStore(t *testing.T, c *clock, alive func(int, uint64) bool, cwd func(int) (string, error)) *Store {
+	t.Helper()
+	return New(Options{Host: "devbox", Now: c.Now, Alive: alive, Cwd: cwd})
+}
+
+func TestSweepRefreshesDriftedCwdOfLiveSession(t *testing.T) {
+	c := &clock{t0}
+	s := newCwdStore(t, c, nil, func(pid int) (string, error) { return "/w/real", nil })
+	s.Apply(ev("s1", model.EvPrompt))
+	before := s.Snapshot()[0]
+	ch, _, cancel := s.Subscribe(8)
+	defer cancel()
+
+	c.now = t0.Add(time.Minute)
+	s.Sweep()
+	m := recv(t, ch)
+	if m.Type != MsgUpsert || m.Session.Cwd != "/w/real" || m.Session.Project != "real" {
+		t.Fatalf("got %+v", m)
+	}
+	if !m.Session.UpdatedAt.Equal(c.now) || m.Session.State != before.State || !m.Session.StateSince.Equal(before.StateSince) {
+		t.Fatalf("bad timestamps/state: %+v", m.Session)
+	}
+	if got := s.Snapshot()[0]; got.Cwd != "/w/real" {
+		t.Fatalf("not stored: %+v", got)
+	}
+
+	s.Sweep()
+	expectQuiet(t, ch)
+}
+
+func TestSweepCwdUnchangedOrErrorOrEmptyDoesNothing(t *testing.T) {
+	for name, fn := range map[string]func(int) (string, error){
+		"same":  func(int) (string, error) { return "/w/api", nil },
+		"error": func(int) (string, error) { return "/w/other", errors.New("gone") },
+		"empty": func(int) (string, error) { return "", nil },
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newCwdStore(t, &clock{t0}, nil, fn)
+			s.Apply(ev("s1", model.EvPrompt))
+			ch, _, cancel := s.Subscribe(8)
+			defer cancel()
+			s.Sweep()
+			expectQuiet(t, ch)
+			if got := s.Snapshot()[0]; got.Cwd != "/w/api" || got.Project != "api" {
+				t.Fatalf("changed: %+v", got)
+			}
+		})
+	}
+}
+
+func TestSweepDoesNotRefreshCwdOfDeadSession(t *testing.T) {
+	dead := false
+	s := newCwdStore(t, &clock{t0}, func(int, uint64) bool { return !dead }, func(int) (string, error) { return "/w/real", nil })
+	s.Apply(ev("s1", model.EvPrompt))
+	dead = true
+	ch, _, cancel := s.Subscribe(8)
+	defer cancel()
+	s.Sweep()
+	if m := recv(t, ch); m.Session.State != model.StateEnded || m.Session.Cwd != "/w/api" {
+		t.Fatalf("got %+v", m.Session)
+	}
+	s.Sweep()
+	expectQuiet(t, ch)
+	if got := s.Snapshot()[0]; got.Cwd != "/w/api" {
+		t.Fatalf("ended session refreshed: %+v", got)
+	}
+}

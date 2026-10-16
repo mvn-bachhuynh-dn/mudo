@@ -40,7 +40,7 @@ func runServe(args []string) error {
 	logger := log.New(os.Stderr, "mudod: ", log.LstdFlags)
 
 	pfs := proc.FS{Root: "/proc"}
-	st := store.New(store.Options{Host: host, Path: *statePath, Alive: pfs.Alive})
+	st := store.New(store.Options{Host: host, Path: *statePath, Alive: pfs.Alive, Cwd: pfs.Cwd})
 	if err := st.Load(); err != nil {
 		return fmt.Errorf("load state: %w", err)
 	}

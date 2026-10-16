@@ -17,7 +17,7 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 	if prev == nil {
 		return model.Session{
 			ID: ev.SessionID, Agent: ev.Agent, Host: host,
-			Cwd: ev.Cwd, Project: projectName(ev.Cwd),
+			Cwd: ev.Cwd, Project: ProjectName(ev.Cwd),
 			State: initialState(ev.Kind), StateSince: now,
 			PID: ev.PID, PIDStart: ev.PIDStart,
 			LastPrompt: ev.Prompt, UpdatedAt: now,
@@ -30,7 +30,7 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 	// the agent cd's. Keep the session's cwd unless it is unknown, a fresh
 	// session_start re-homes it, or the hook read it from the agent process.
 	if ev.Cwd != "" && ev.Cwd != s.Cwd && (s.Cwd == "" || ev.Kind == model.EvSessionStart || ev.CwdFromProc) {
-		s.Cwd, s.Project = ev.Cwd, projectName(ev.Cwd)
+		s.Cwd, s.Project = ev.Cwd, ProjectName(ev.Cwd)
 		changed = true
 	}
 	if ev.PID != 0 && (ev.PID != s.PID || ev.PIDStart != s.PIDStart) {
@@ -107,7 +107,8 @@ func initialState(k model.EventKind) model.State {
 	return model.StateIdle
 }
 
-func projectName(cwd string) string {
+// ProjectName derives a session's display name from its working directory.
+func ProjectName(cwd string) string {
 	if cwd == "" {
 		return ""
 	}

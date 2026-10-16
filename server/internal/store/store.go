@@ -36,6 +36,7 @@ type Options struct {
 	Path     string // state file; empty disables persistence
 	Now      func() time.Time
 	Alive    func(pid int, start uint64) bool
+	Cwd      func(pid int) (string, error) // agent process cwd; errors are ignored
 	EndedTTL time.Duration
 }
 
@@ -55,6 +56,9 @@ func New(o Options) *Store {
 	}
 	if o.Alive == nil {
 		o.Alive = func(int, uint64) bool { return true }
+	}
+	if o.Cwd == nil {
+		o.Cwd = func(int) (string, error) { return "", errors.New("cwd unavailable") }
 	}
 	if o.EndedTTL == 0 {
 		o.EndedTTL = time.Hour
@@ -145,7 +149,8 @@ func (s *Store) Subscribe(buf int) (<-chan Msg, []model.Session, func()) {
 	return ch, snap, cancel
 }
 
-// Sweep ends sessions whose process is gone and deletes long-ended ones.
+// Sweep ends sessions whose process is gone, re-reads the cwd of live ones
+// from their process, and deletes long-ended ones.
 func (s *Store) Sweep() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -154,6 +159,12 @@ func (s *Store) Sweep() {
 		switch {
 		case x.State != model.StateEnded && x.PID != 0 && !s.opts.Alive(x.PID, x.PIDStart):
 			s.put(machine.End(x, now))
+		case x.State != model.StateEnded && x.PID != 0:
+			// Alive: the hook-reported cwd may have drifted; trust the process.
+			if cwd, err := s.opts.Cwd(x.PID); err == nil && cwd != "" && cwd != x.Cwd {
+				x.Cwd, x.Project, x.UpdatedAt = cwd, machine.ProjectName(cwd), now
+				s.put(x)
+			}
 		case x.State == model.StateEnded && now.Sub(x.StateSince) >= s.opts.EndedTTL:
 			delete(s.sessions, id)
 			s.broadcast(Msg{Type: MsgRemove, ID: id})
