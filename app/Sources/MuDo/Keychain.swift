@@ -23,15 +23,15 @@ enum Keychain {
         return String(data: data, encoding: .utf8)
     }
 
-    static func write(_ value: String, account: String) {
+    /// Returns `errSecSuccess` on success, otherwise the failing status.
+    static func write(_ value: String, account: String) -> OSStatus {
         let data = Data(value.utf8)
         let status = SecItemUpdate(query(account) as CFDictionary,
                                    [kSecValueData as String: data] as CFDictionary)
-        if status == errSecItemNotFound {
-            var add = query(account)
-            add[kSecValueData as String] = data
-            SecItemAdd(add as CFDictionary, nil)
-        }
+        guard status == errSecItemNotFound else { return status }
+        var add = query(account)
+        add[kSecValueData as String] = data
+        return SecItemAdd(add as CFDictionary, nil)
     }
 
     static func delete(account: String) {

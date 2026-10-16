@@ -1,6 +1,7 @@
 import Foundation
 import MuDoCore
 import Observation
+import Security
 
 /// User settings (spec 6.5). Server list and numbers in UserDefaults, tokens in the Keychain.
 @MainActor
@@ -15,6 +16,8 @@ final class AppSettings {
     @ObservationIgnored private let defaults: UserDefaults
 
     private(set) var servers: [ServerConfig]
+    /// Set when the last token save failed; nil after a successful one.
+    private(set) var keychainError: String?
     var staleMinutes: Int {
         didSet { defaults.set(staleMinutes, forKey: Key.stale) }
     }
@@ -37,7 +40,10 @@ final class AppSettings {
     }
 
     func setToken(_ token: String, for id: UUID) {
-        Keychain.write(token, account: id.uuidString)
+        let status = Keychain.write(token, account: id.uuidString)
+        keychainError = status == errSecSuccess
+            ? nil
+            : "Could not save the token in the Keychain (OSStatus \(status))."
     }
 
     @discardableResult
