@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# One-time, on the build Mac: create a stable self-signed code-signing identity "MuDo Dev"
+# in a dedicated keychain, so every rebuild of MuDo.app has the same designated requirement
+# and macOS keeps Keychain "Always Allow" and the Chrome Automation grant across rebuilds.
+# Idempotent: does nothing when the identity already exists.
+set -euo pipefail
+
+name="MuDo Dev"
+keychain="$HOME/Library/Keychains/mudo-signing.keychain-db"
+passfile="$HOME/.mudo-signing-pass"
+
+if [[ ! -f "$passfile" ]]; then
+    (umask 077 && openssl rand -hex 24 >"$passfile")
+fi
+chmod 600 "$passfile"
+pass="$(cat "$passfile")"
+
+if [[ ! -f "$keychain" ]]; then
+    security create-keychain -p "$pass" "$keychain"
+fi
+security unlock-keychain -p "$pass" "$keychain"
+# No auto-lock timeout, no lock on sleep.
+security set-keychain-settings "$keychain"
+
+# Add the keychain to the user search list, keeping the existing entries.
+if ! security list-keychains -d user | grep -qF "$keychain"; then
+    existing=()
+    while IFS= read -r line; do
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%\"}"; line="${line#\"}"
+        [[ -n "$line" ]] && existing+=("$line")
+    done < <(security list-keychains -d user)
+    security list-keychains -d user -s "${existing[@]}" "$keychain"
+fi
+
+if security find-identity -p codesigning "$keychain" | grep -qF "\"$name\""; then
+    echo "Identity \"$name\" already exists in $keychain"
+else
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
+    cat >"$work/cert.cnf" <<EOF
+[req]
+distinguished_name = dn
+x509_extensions = ext
+prompt = no
+[dn]
+CN = $name
+[ext]
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature
+extendedKeyUsage = critical, codeSigning
+subjectKeyIdentifier = hash
+EOF
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+        -config "$work/cert.cnf" -keyout "$work/key.pem" -out "$work/cert.pem" 2>/dev/null
+    # -legacy: macOS `security import` cannot read OpenSSL 3's default p12 encryption.
+    legacy=()
+    openssl pkcs12 -help 2>&1 | grep -q -- '-legacy' && legacy=(-legacy)
+    openssl pkcs12 -export ${legacy[@]+"${legacy[@]}"} -inkey "$work/key.pem" -in "$work/cert.pem" \
+        -name "$name" -passout pass:"$pass" -out "$work/id.p12"
+    security import "$work/id.p12" -k "$keychain" -P "$pass" -T /usr/bin/codesign
+    cp "$work/cert.pem" "$HOME/.mudo-signing-cert.pem"
+fi
+
+# Let codesign use the key without a prompt.
+security set-key-partition-list -S apple-tool:,apple: -s -k "$pass" "$keychain" >/dev/null
+
+# codesign accepts the self-signed identity without trust settings (find-identity -v
+# still lists it as CSSMERR_TP_NOT_TRUSTED). Prove it by signing a scratch binary.
+probe="$(mktemp -d)/probe"
+cp /usr/bin/true "$probe"
+if codesign --force --sign "$name" --keychain "$keychain" "$probe" 2>/dev/null; then
+    rm -rf "$(dirname "$probe")"
+    echo "OK: codesign can sign with \"$name\"."
+else
+    rm -rf "$(dirname "$probe")"
+    echo "codesign cannot use \"$name\". Try trusting it for code signing:" >&2
+    echo "  security add-trusted-cert -r trustRoot -p codeSign -k \"$keychain\" ~/.mudo-signing-cert.pem" >&2
+    echo "(macOS asks for your login password to change trust settings.)" >&2
+    exit 1
+fi

@@ -15,6 +15,11 @@ final class AppSettings {
     }
 
     @ObservationIgnored private let defaults: UserDefaults
+    /// Tokens read from or written to the Keychain this launch, so each server's token
+    /// is read at most once (every read can trigger a Keychain access prompt).
+    @ObservationIgnored private var tokenCache: [UUID: String] = [:]
+    /// Servers whose Keychain read failed; not retried until `reloadToken(for:)`.
+    @ObservationIgnored private var failedReads: Set<UUID> = []
 
     private(set) var servers: [ServerConfig]
     /// Set when a token save or read failed; nil after a successful save.
@@ -45,19 +50,42 @@ final class AppSettings {
     }
 
     /// The server's token; "" when none is stored; nil when the Keychain read failed.
+    /// Served from the in-memory cache; the Keychain is read only on first access.
     func token(for id: UUID) -> String? {
+        if let cached = tokenCache[id] { return cached }
+        if failedReads.contains(id) { return nil }
+        return readToken(for: id)
+    }
+
+    /// Like `token(for:)`, but retries a Keychain read that failed earlier
+    /// (used when Settings explicitly loads a server).
+    func reloadToken(for id: UUID) -> String? {
+        if let cached = tokenCache[id] { return cached }
+        failedReads.remove(id)
+        return readToken(for: id)
+    }
+
+    private func readToken(for id: UUID) -> String? {
         let (value, status) = Keychain.read(account: id.uuidString)
-        if status == errSecSuccess, let value { return value }
-        if status == errSecItemNotFound { return "" }
+        if status == errSecSuccess || status == errSecItemNotFound {
+            let token = status == errSecSuccess ? value ?? "" : ""
+            tokenCache[id] = token
+            return token
+        }
+        failedReads.insert(id)
         keychainError = "Could not read the token from the Keychain (OSStatus \(status))."
         return nil
     }
 
     func setToken(_ token: String, for id: UUID) {
         let status = Keychain.write(token, account: id.uuidString)
-        keychainError = status == errSecSuccess
-            ? nil
-            : "Could not save the token in the Keychain (OSStatus \(status))."
+        if status == errSecSuccess {
+            tokenCache[id] = token
+            failedReads.remove(id)
+            keychainError = nil
+        } else {
+            keychainError = "Could not save the token in the Keychain (OSStatus \(status))."
+        }
     }
 
     @discardableResult
@@ -88,6 +116,8 @@ final class AppSettings {
     func remove(_ id: UUID) {
         servers.removeAll { $0.id == id }
         Keychain.delete(account: id.uuidString)
+        tokenCache[id] = nil
+        failedReads.remove(id)
         save()
     }
 

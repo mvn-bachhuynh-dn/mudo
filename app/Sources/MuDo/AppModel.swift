@@ -39,6 +39,7 @@ final class AppModel {
         store.ignoreRules = IgnoreRules(patterns: settings.ignoredPaths)
         store.setServers(settings.servers)
         let wanted = Dictionary(uniqueKeysWithValues: settings.servers.map { ($0.id, $0) })
+        // Tokens come from the settings' in-memory cache (the Keychain is read once per server).
         // nil = the Keychain read failed: keep the token we already use instead of reconnecting.
         var current: [UUID: String] = [:]
         for config in settings.servers {

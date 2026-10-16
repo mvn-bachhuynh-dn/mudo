@@ -152,7 +152,7 @@ struct ServerEditor: View {
         name = server.name
         daemon = server.daemonURL.absoluteString
         codeServer = server.codeServerURL?.absoluteString ?? ""
-        let stored = model.settings.token(for: server.id)
+        let stored = model.settings.reloadToken(for: server.id)
         tokenUnreadable = stored == nil
         token = stored ?? ""
         error = nil
