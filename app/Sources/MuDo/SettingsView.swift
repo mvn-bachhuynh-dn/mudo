@@ -39,6 +39,7 @@ struct SettingsView: View {
     let model: AppModel
     @State private var link = ""
     @State private var linkError = false
+    @State private var ignoredText = ""
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -63,6 +64,13 @@ struct SettingsView: View {
                 Stepper("Blink after \(settings.staleMinutes) min", value: $settings.staleMinutes, in: 1...120)
                 Stepper("Snooze for \(settings.snoozeMinutes) min", value: $settings.snoozeMinutes, in: 1...240)
             }
+            Section("Hidden sessions") {
+                TextEditor(text: $ignoredText)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minHeight: 70)
+                Text("Sessions whose folder matches are hidden. * matches anything.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
             }
@@ -71,6 +79,13 @@ struct SettingsView: View {
         .frame(minWidth: 480, idealWidth: 480, minHeight: 460, idealHeight: 560)
         .onChange(of: settings.staleMinutes) { model.applySettings() }
         .onChange(of: settings.snoozeMinutes) { model.applySettings() }
+        .onAppear { ignoredText = settings.ignoredPaths.joined(separator: "\n") }
+        .onChange(of: ignoredText) { _, text in
+            settings.ignoredPaths = text.split(separator: "\n", omittingEmptySubsequences: true)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            model.applySettings()
+        }
         .onChange(of: launchAtLogin) { _, on in setLaunchAtLogin(on) }
     }
 

@@ -80,16 +80,12 @@ public enum TabMatcher {
 
 /// AppleScript sources sent to Google Chrome. Kept here so they are testable on any OS.
 public enum ChromeScripts {
-    /// Returns a list of {window id, tab index, URL, title}.
+    /// Returns a list of {window id, list of tab URLs, list of tab titles}; one bulk fetch per window.
     public static let listTabs = """
     tell application id "com.google.Chrome"
         set out to {}
         repeat with w in windows
-            set ti to 0
-            repeat with t in tabs of w
-                set ti to ti + 1
-                set end of out to {id of w, ti, URL of t, title of t}
-            end repeat
+            set end of out to {id of w, URL of every tab of w, title of every tab of w}
         end repeat
         return out
     end tell

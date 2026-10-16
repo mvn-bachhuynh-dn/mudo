@@ -35,6 +35,7 @@ final class AppModel {
     func applySettings() {
         store.staleAfter = TimeInterval(settings.staleMinutes * 60)
         store.snoozeFor = TimeInterval(settings.snoozeMinutes * 60)
+        store.ignoreRules = IgnoreRules(patterns: settings.ignoredPaths)
         store.setServers(settings.servers)
         let wanted = Dictionary(uniqueKeysWithValues: settings.servers.map { ($0.id, $0) })
         // nil = the Keychain read failed: keep the token we already use instead of reconnecting.

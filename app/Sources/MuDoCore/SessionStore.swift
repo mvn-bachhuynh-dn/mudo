@@ -40,6 +40,7 @@ public final class SessionStore {
 
     public var staleAfter: TimeInterval = 300
     public var snoozeFor: TimeInterval = 600
+    public var ignoreRules = IgnoreRules(patterns: [])
     public private(set) var now: Date
 
     var serverStates: [UUID: ServerState] = [:]
@@ -207,7 +208,7 @@ extension SessionStore {
         var out: [SessionRow] = []
         for (serverID, server) in serverStates {
             let offline = server.status != .connected
-            for s in server.sessions.values where s.state != .ended {
+            for s in server.sessions.values where s.state != .ended && !ignoreRules.ignores(cwd: s.cwd) {
                 let key = SessionKey(serverID: serverID, sessionID: s.id)
                 let since = s.stateSince.addingTimeInterval(-server.offset)
                 let elapsed = max(0, now.timeIntervalSince(since))

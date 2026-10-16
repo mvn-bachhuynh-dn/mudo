@@ -11,6 +11,7 @@ final class AppSettings {
         static let servers = "servers"
         static let stale = "staleMinutes"
         static let snooze = "snoozeMinutes"
+        static let ignoredPaths = "ignoredPaths"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -25,6 +26,13 @@ final class AppSettings {
         didSet { defaults.set(snoozeMinutes, forKey: Key.snooze) }
     }
 
+    static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
+
+    /// Glob patterns for session folders to hide, one per entry.
+    var ignoredPaths: [String] {
+        didSet { defaults.set(ignoredPaths, forKey: Key.ignoredPaths) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         servers = defaults.data(forKey: Key.servers)
@@ -33,6 +41,7 @@ final class AppSettings {
         staleMinutes = stale > 0 ? stale : 5
         let snooze = defaults.integer(forKey: Key.snooze)
         snoozeMinutes = snooze > 0 ? snooze : 10
+        ignoredPaths = defaults.stringArray(forKey: Key.ignoredPaths) ?? Self.defaultIgnoredPaths
     }
 
     /// The server's token; "" when none is stored; nil when the Keychain read failed.

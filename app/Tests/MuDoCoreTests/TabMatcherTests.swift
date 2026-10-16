@@ -156,6 +156,8 @@ import Testing
 
     @Test func listScriptReturnsWindowIDs() {
         #expect(ChromeScripts.listTabs.contains("id of w"))
+        #expect(ChromeScripts.listTabs.contains("URL of every tab of w"))
+        #expect(ChromeScripts.listTabs.contains("title of every tab of w"))
         #expect(ChromeScripts.listTabs.contains(#"tell application id "com.google.Chrome""#))
     }
 }

@@ -18,18 +18,32 @@ final class ChromeTabFocuser {
         case failed
     }
 
+    private var inFlight = false
+
     func focus(codeServer: URL, cwd: String, project: String) {
+        guard !inFlight else {
+            Self.log.info("focus ignored (already in flight) cwd=\(cwd, privacy: .public)")
+            return
+        }
+        inFlight = true
+        start(codeServer: codeServer, cwd: cwd, project: project)
+    }
+
+    private func start(codeServer: URL, cwd: String, project: String) {
         let target = TabMatcher.targetURL(codeServer: codeServer, cwd: cwd)
         Self.log.info("focus cwd=\(cwd, privacy: .public) project=\(project, privacy: .public) target=\(target.absoluteString, privacy: .public)")
         guard let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.chromeBundleID) else {
+            inFlight = false
             NSWorkspace.shared.open(target)
             return
         }
         guard !NSRunningApplication.runningApplications(withBundleIdentifier: Self.chromeBundleID).isEmpty else {
+            inFlight = false
             openNewWindow(target, chrome: chrome)
             return
         }
         Task {
+            defer { inFlight = false }
             switch await run(ChromeScripts.listTabs, parse: Self.parseTabs) {
             case .denied:
                 Self.log.info("list tabs denied -> open -na")
@@ -106,16 +120,21 @@ final class ChromeTabFocuser {
         return result
     }
 
+    /// Each item is {window id, list of URLs, list of titles}; the tab index is the 1-based position.
     nonisolated static func parseTabs(_ list: NSAppleEventDescriptor) -> [ChromeTab] {
         guard list.numberOfItems > 0 else { return [] }
-        return (1...list.numberOfItems).compactMap { i in
-            guard let item = list.atIndex(i), item.numberOfItems == 4,
-                  let window = item.atIndex(1), let tabIdx = item.atIndex(2),
-                  let url = item.atIndex(3)?.stringValue else { return nil }
-            return ChromeTab(windowID: Int(window.int32Value),
-                             tabIndex: Int(tabIdx.int32Value),
-                             url: url,
-                             title: item.atIndex(4)?.stringValue ?? "")
+        var tabs: [ChromeTab] = []
+        for i in 1...list.numberOfItems {
+            guard let item = list.atIndex(i), item.numberOfItems == 3,
+                  let window = item.atIndex(1),
+                  let urls = item.atIndex(2), let titles = item.atIndex(3),
+                  urls.numberOfItems == titles.numberOfItems, urls.numberOfItems > 0 else { continue }
+            for t in 1...urls.numberOfItems {
+                guard let url = urls.atIndex(t)?.stringValue else { continue }
+                tabs.append(ChromeTab(windowID: Int(window.int32Value), tabIndex: t, url: url,
+                                      title: titles.atIndex(t)?.stringValue ?? ""))
+            }
         }
+        return tabs
     }
 }

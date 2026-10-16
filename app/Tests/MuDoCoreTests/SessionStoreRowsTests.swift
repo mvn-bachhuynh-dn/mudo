@@ -185,3 +185,23 @@ import Testing
         #expect(store.rows[0].serverName == "a")
     }
 }
+
+@MainActor
+@Suite struct SessionStoreIgnoreTests {
+    @Test func ignoredSessionsAreAbsentFromRowsAndPill() {
+        let t0 = utc(2026, 10, 16, 10, 0, 0)
+        let store = SessionStore(clock: { t0 })
+        let a = makeServer("a")
+        store.setServers([a])
+        store.setStatus(.connected, for: a.id)
+        store.apply(.snapshot(serverNow: t0, host: "a", sessions: [
+            makeSession("1", .running, since: t0, project: "must-do"),
+            makeSession("2", .waiting, since: t0, project: "kirocrew-workspace/_bg"),
+        ]), from: a.id)
+        #expect(store.rows.count == 2)
+        store.ignoreRules = IgnoreRules(patterns: ["*/kirocrew-workspace/_bg*"])
+        #expect(store.rows.map(\.id.sessionID) == ["1"])
+        #expect(store.pill.running == 1)
+        #expect(store.pill.waiting == 0)
+    }
+}
