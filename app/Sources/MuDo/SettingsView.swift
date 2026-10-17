@@ -221,6 +221,9 @@ struct ServerEditor: View {
         error = nil
         var updated = server
         updated.name = name.isEmpty ? server.name : name
+        // Pointing the managed local server elsewhere makes it an ordinary server,
+        // so "Monitor this Mac" Off never uninstalls on behalf of a remote one.
+        if daemonURL != server.daemonURL { updated.managedLocal = false }
         updated.daemonURL = daemonURL
         updated.codeServerURL = codeServerURL
         let keepStoredToken = tokenUnreadable && token.isEmpty

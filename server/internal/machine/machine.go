@@ -46,7 +46,9 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 	// that knows part of it updates only the fields it captured.
 	if ev.Terminal != nil {
 		t := *ev.Terminal
-		if s.Terminal != nil {
+		// A session_start (new or resumed agent process) describes the
+		// terminal afresh; later events only fill in what they know.
+		if s.Terminal != nil && ev.Kind != model.EvSessionStart {
 			t = mergeTerminal(*s.Terminal, t)
 		}
 		if s.Terminal == nil || t != *s.Terminal {

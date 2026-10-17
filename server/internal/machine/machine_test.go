@@ -284,3 +284,14 @@ func TestTerminalMergesFieldByField(t *testing.T) {
 		t.Fatalf("code server set: changed=%v terminal=%+v", changed, got)
 	}
 }
+
+func TestSessionStartReplacesTerminal(t *testing.T) {
+	prev := session(model.StateIdle)
+	prev.Terminal = &model.Terminal{Program: "tmux", TmuxPane: "%3", TmuxSocket: "/tmp/tmux-1000/default", TTY: "/dev/ttys004"}
+	ev := event(model.EvSessionStart)
+	ev.Terminal = &model.Terminal{Program: "iTerm.app", TTY: "/dev/ttys009"}
+	got, changed := Apply(prev, ev, "devbox", t0.Add(time.Minute))
+	if !changed || *got.Terminal != *ev.Terminal {
+		t.Fatalf("changed=%v terminal=%+v; want a fresh %+v", changed, got.Terminal, ev.Terminal)
+	}
+}
