@@ -229,3 +229,5 @@ Manual on the build Mac, via `mudo://focus?session=<id>`: iTerm2, Terminal.app, 
 5. `LocalFocuser` + SSH focus wired into `AppModel` (app).
 6. Bundled mudod + Monitor this Mac toggle + Makefile hand-off (app).
 7. README updates and manual verification.
+
+## Verification notes

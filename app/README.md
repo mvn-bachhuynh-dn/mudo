@@ -8,6 +8,8 @@ Overview, install steps, usage and troubleshooting: see the [top-level README](.
 
 Needs macOS 26 and Xcode 26 (or its command line tools).
 
+`make app` bundles `Resources/mudod` (the darwin daemon for **Monitor this Mac**) into `MuDo.app/Contents/Resources/mudod` and signs it with `--options runtime`. The Mac has no Go toolchain: run `make -C server app-resource` on the Linux side first, then `scripts/on-mac 'make app'` syncs it over. Without that file `make app` stops with a message.
+
 ```bash
 make test      # MuDoCore unit tests
 make app       # build/MuDo.app, signed with "MuDo Dev" if present, else ad-hoc
@@ -34,8 +36,13 @@ Run `mudod install --code-server <url>` on the server, then open the printed `mu
 
 The devbox daemon is reachable on the LAN at `http://192.168.1.10:7879` (Tailscale egress from that server is blocked by Cloudflare WARP).
 
+## Monitor this Mac
+
+Settings → This Mac → **Monitor this Mac** runs the bundled `mudod install --link-only` and adds the server `This Mac` (`http://127.0.0.1:7879`); off runs `mudod uninstall` and removes it only on success. The local server is the one whose daemon URL host is `127.0.0.1`, `::1` or `localhost`. On launch, if the bundled binary's SHA-256 differs from `~/.local/bin/mudod`, the app re-runs install to upgrade it.
+
 ## Permissions
 
+- Local and SSH sessions: Automation for iTerm2, Terminal, Ghostty and System Events, and Accessibility for raising VS Code / Cursor / Windsurf / VSCodium / Kiro windows. Each is asked once; a denial is logged under the `focus` category and the click only activates the app.
 - First click on a session asks for Automation access to Google Chrome. If denied, MuDo opens a new Chrome window instead, and the menu shows "Allow MuDo to control Chrome…".
 - Tokens are stored in the Keychain and read once per server per launch (then cached in memory).
 - With an ad-hoc signature (no "MuDo Dev" identity), each rebuild changes the signature, so macOS asks again for Keychain access and for Automation access to Google Chrome. Run `scripts/make-signing-identity` once to stop that.
