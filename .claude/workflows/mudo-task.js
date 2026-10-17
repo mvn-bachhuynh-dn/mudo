@@ -20,7 +20,7 @@ const RULES = `Project rules (binding):
 - Never run \`mudod install\`/\`uninstall\` for real.
 - The repo is PUBLIC: never write real hostnames, IPs, tokens or emails. Use placeholders (devbox, 100.64.0.10, fd7a:115c:a1e0::10, code.example.com, user@).
 - Go tests: \`cd server && go test ./...\` (also \`GOOS=darwin go vet ./...\` when darwin files change).
-- Swift tests run on the build Mac: \`MUDO_MAC=mudo-mac app/scripts/on-mac swift test\` (needs network, no sandbox).
+- Swift tests run on the build Mac: \`MUDO_MAC=mudo-mac app/scripts/on-mac swift test\` (needs network, no sandbox). If the Mac is unreachable (check first with \`ssh -o ConnectTimeout=8 mudo-mac true\`), run MuDoCore tests with \`app/scripts/docker-test\` (Linux, Docker, no sandbox) and say in your report that the macOS-only MuDo target was NOT compiled; in that case write AppKit code with extra care (Swift 6 strict concurrency, @MainActor, Sendable) since nothing compiles it.
 - Match the surrounding code's style and comment density. Commit with a conventional message ending in "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".`
 
 const IMPL = {
