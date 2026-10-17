@@ -85,18 +85,13 @@ final class LocalFocuser {
         }
         let lsof = await Self.runTool("/usr/sbin/lsof", ["-nP", "-a", "-iTCP", "-sTCP:ESTABLISHED", "-F", "pcn"]) ?? ""
         let conns = LsofSSH.parse(lsof)
-        var muxPIDs: Set<Int> = []
+        var commandLines: [Int: String] = [:]
         for pid in Set(conns.map(\.pid)) {
-            let command = await Self.runTool("/bin/ps", ["-o", "command=", "-p", String(pid)]) ?? ""
-            if command.contains("[mux]") { muxPIDs.insert(pid) }
+            commandLines[pid] = await Self.runTool("/bin/ps", ["-o", "command=", "-p", String(pid)])
         }
-        let mux = muxPIDs
-        // Spec 5.5 rule 3: ControlMasters, and ssh without a tty unless an editor runs it (Remote-SSH).
+        let commands = commandLines
         let discarded: (Int) -> Bool = { pid in
-            if mux.contains(pid) { return true }
-            guard table.process(pid)?.tty == nil else { return false }
-            if case .app(.vscodeLike)? = table.owner(of: pid) { return false }
-            return true
+            SSHPick.discard(pid: pid, table: table, commandLine: commands[pid])
         }
         guard let conn = SSHPick.choose(conns: conns, terminal: t, isMux: discarded) else {
             fallback(target, step: "no ssh match among \(conns.count) connections")
@@ -152,6 +147,10 @@ final class LocalFocuser {
             Self.log.info("tmux binary not found")
             return nil
         }
+        if let socket, !Self.socketAllowed(socket) {
+            Self.log.info("tmux socket not owned by this user: \(socket, privacy: .public)")
+            return nil
+        }
         let base = socket.map { ["-S", $0] } ?? []
         guard let session = await Self.runTool(bin, base + ["display", "-p", "-t", pane, "#{session_name}"])?
             .trimmingCharacters(in: .newlines), !session.isEmpty else {
@@ -182,8 +181,8 @@ final class LocalFocuser {
             if !fromTmux, !target.remote, let id = await ghosttyByCWD(target.cwd),
                await runBool(TerminalScripts.ghosttyFocus(id: id), step: "Ghostty focus") { return }
         case let .vscodeLike(bundlePath):
-            let script = TerminalScripts.raiseWindow(appName: Self.processName(bundlePath),
-                                                     titleContains: Self.titleCandidates(cwd: target.cwd, project: target.project))
+            let titles = FocusHints.titleCandidates(cwd: target.cwd, project: target.project, home: NSHomeDirectory())
+            let script = TerminalScripts.raiseWindow(appName: Self.processName(bundlePath), titleContains: titles)
             if await runBool(script, step: "editor window") { return }
         case .other:
             break
@@ -227,7 +226,7 @@ final class LocalFocuser {
         Self.log.info("\(step, privacy: .public) failed -> activate")
         if target.remote {
             activateFrontmostTerminal()
-        } else if let id = Self.bundleID(program: target.program) {
+        } else if let id = FocusHints.bundleID(program: target.program) {
             activate(bundleID: id)
         } else {
             Self.log.info("no app to activate for program=\(target.program ?? "-", privacy: .public)")
@@ -279,9 +278,16 @@ final class LocalFocuser {
         return ProcessTable(psOutput: out)
     }
 
+    /// Only well-known installs run; the recorded path just picks among them.
     private func tmuxBinary(_ target: Target) -> String? {
         TmuxPick.resolveBinary(recorded: target.tmuxBin, exists: { FileManager.default.isExecutableFile(atPath: $0) },
                                home: NSHomeDirectory())
+    }
+
+    /// The socket path must belong to this user before tmux gets `-S` with it.
+    private static func socketAllowed(_ path: String) -> Bool {
+        let owner = (try? FileManager.default.attributesOfItem(atPath: path))?[.ownerAccountID] as? NSNumber
+        return TmuxPick.socketAllowed(path: path, owner: owner?.uint32Value, currentUID: getuid())
     }
 
     /// Runs `path` with `args` (no shell) off the main actor; stdout, or nil on failure or after 2 s.
@@ -348,16 +354,6 @@ final class LocalFocuser {
         return String(cString: resolved)
     }
 
-    /// cwd components deepest first, then the project; the editor's title usually names the folder.
-    nonisolated static func titleCandidates(cwd: String, project: String) -> [String] {
-        var out: [String] = []
-        for name in cwd.split(separator: "/").reversed().map(String.init) + [project]
-        where !name.isEmpty && !out.contains(name) {
-            out.append(name)
-        }
-        return out
-    }
-
     /// The System Events process name: the running app's name ("Code" for VS Code), else the bundle name.
     private static func processName(_ bundlePath: String) -> String {
         if let name = running(bundlePath: bundlePath)?.localizedName { return name }
@@ -367,16 +363,5 @@ final class LocalFocuser {
 
     private static func running(bundlePath: String) -> NSRunningApplication? {
         NSWorkspace.shared.runningApplications.first { $0.bundleURL?.path == bundlePath }
-    }
-
-    /// `TERM_PROGRAM` values captured by the hook.
-    private static func bundleID(program: String?) -> String? {
-        switch program ?? "" {
-        case "iTerm.app": "com.googlecode.iterm2"
-        case "Apple_Terminal": "com.apple.Terminal"
-        case "ghostty": "com.mitchellh.ghostty"
-        case "vscode": "com.microsoft.VSCode"
-        default: nil
-        }
     }
 }

@@ -21,6 +21,15 @@ public enum SSHPick {
         return byHost.count == 1 ? byHost[0] : nil
     }
 
+    /// Spec 5.5 rule 3: drops ControlMasters (`[mux]` in the command line), and ssh without a tty
+    /// unless an editor runs it (Remote-SSH). `commandLine` is `ps -o command=` for `pid`.
+    public static func discard(pid: Int, table: ProcessTable, commandLine: String?) -> Bool {
+        if commandLine?.contains("[mux]") == true { return true }
+        guard table.process(pid)?.tty == nil else { return false }
+        if case .app(.vscodeLike)? = table.owner(of: pid) { return false }
+        return true
+    }
+
     /// The address as raw bytes, so `fd7a::10` and its expanded form compare equal. No DNS.
     static func numeric(_ host: String) -> [UInt8]? {
         var v4 = in_addr()

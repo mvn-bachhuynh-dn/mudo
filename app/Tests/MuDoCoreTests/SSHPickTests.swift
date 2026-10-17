@@ -54,4 +54,43 @@ import Testing
         #expect(SSHPick.choose(conns: conns, terminal: t, isMux: noMux) == nil)
         #expect(SSHPick.choose(conns: [], terminal: terminal, isMux: noMux) == nil)
     }
+
+    static let ps = """
+        1     0 ??       /sbin/launchd
+      500     1 ??       /Applications/iTerm.app/Contents/MacOS/iTerm2
+      510   500 ttys003  /usr/bin/login
+      511   510 ttys003  -zsh
+      512   511 ttys003  ssh
+      520     1 ??       ssh
+      530     1 ??       ssh
+      600     1 ??       /Applications/Visual Studio Code.app/Contents/MacOS/Electron
+      610   600 ??       /Applications/Visual Studio Code.app/Contents/Frameworks/Code Helper.app/Contents/MacOS/Code Helper
+      620   610 ??       /usr/bin/ssh
+
+    """
+    let table = ProcessTable(psOutput: Self.ps)
+
+    @Test func discardKeepsTerminalSSH() {
+        #expect(!SSHPick.discard(pid: 512, table: table, commandLine: "ssh devbox"))
+    }
+
+    @Test func discardDropsControlMaster() {
+        #expect(SSHPick.discard(pid: 530, table: table, commandLine: "ssh: /Users/dev/.ssh/cm-devbox [mux]"))
+        // Even on a tty, a ControlMaster is never the session's client.
+        #expect(SSHPick.discard(pid: 512, table: table, commandLine: "ssh: /Users/dev/.ssh/cm-devbox [mux]"))
+    }
+
+    @Test func discardDropsTTYlessTunnelUnderLaunchd() {
+        #expect(SSHPick.discard(pid: 520, table: table, commandLine: "ssh -N -L 8080:localhost:8080 devbox"))
+        #expect(SSHPick.discard(pid: 520, table: table, commandLine: nil))
+    }
+
+    @Test func discardKeepsTTYlessSSHUnderEditor() {
+        #expect(!SSHPick.discard(pid: 620, table: table,
+                                 commandLine: "/usr/bin/ssh -T -D 61234 -o ConnectTimeout=15 devbox bash"))
+    }
+
+    @Test func discardDropsUnknownPID() {
+        #expect(SSHPick.discard(pid: 4242, table: table, commandLine: nil))
+    }
 }

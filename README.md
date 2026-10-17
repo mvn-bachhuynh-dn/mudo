@@ -209,7 +209,7 @@ No open Chrome tab matched (no code-server tab for that folder or a parent folde
 To test focus without clicking (e.g. over SSH): `open 'mudo://focus?project=<name>'` (or `?session=<id>`).
 
 **Clicking a local tmux session only activates the terminal.**
-MuDo did not find `tmux`. It uses the path the hook recorded, else the first existing of `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, `~/.local/bin/tmux`, `/usr/bin/tmux`. Install tmux in one of those places (or link it there). Also check that a client is attached to the session; a detached session has no terminal to focus.
+MuDo did not find `tmux`. It only runs `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, `~/.local/bin/tmux` or `/usr/bin/tmux` (the path the hook recorded goes first when it is one of these). Install tmux in one of those places (or link it there). A tmux socket not owned by your user is not used. Also check that a client is attached to the session; a detached session has no terminal to focus.
 
 **Ghostty: the wrong terminal, or only activation.**
 Ghostty before 1.4 exposes no TTY to AppleScript, so MuDo matches by working directory and focuses only when exactly one terminal has the session's folder. Open the session in its own folder, or update Ghostty to 1.4+.

@@ -27,10 +27,20 @@ public enum TmuxPick {
         return nil
     }
 
-    /// The recorded tmux binary if it still exists, else the first existing well-known install.
+    /// A well-known tmux install that exists. The recorded path comes over the network, so it is
+    /// never run as given: it only moves its entry to the front when it is one of the fixed paths.
     public static func resolveBinary(recorded: String?, exists: (String) -> Bool, home: String) -> String? {
-        if let recorded, exists(recorded) { return recorded }
-        let known = ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", home + "/.local/bin/tmux", "/usr/bin/tmux"]
+        var known = ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", home + "/.local/bin/tmux", "/usr/bin/tmux"]
+        if let recorded, let i = known.firstIndex(of: recorded) {
+            known.insert(known.remove(at: i), at: 0)
+        }
         return known.first(where: exists)
+    }
+
+    /// Whether `-S <path>` may be passed to tmux: an absolute path owned by the current user,
+    /// so a socket path from the network cannot point tmux at another user's server.
+    /// `owner` is the path's owner uid, nil when it cannot be read.
+    public static func socketAllowed(path: String, owner: UInt32?, currentUID: UInt32) -> Bool {
+        path.hasPrefix("/") && owner == currentUID
     }
 }

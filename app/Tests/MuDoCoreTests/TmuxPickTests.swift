@@ -38,9 +38,24 @@ import Testing
         #expect(TmuxPick.pane(listPanes: "/dev/ttys009 %1\n", tty: "/dev/ttys009") == nil)
     }
 
-    @Test func resolveBinaryPrefersRecorded() {
+    @Test func resolveBinaryPrefersRecordedKnownPath() {
         let all: (String) -> Bool = { _ in true }
-        #expect(TmuxPick.resolveBinary(recorded: "/nix/bin/tmux", exists: all, home: "/Users/dev") == "/nix/bin/tmux")
+        #expect(TmuxPick.resolveBinary(recorded: "/usr/bin/tmux", exists: all, home: "/Users/dev") == "/usr/bin/tmux")
+        #expect(TmuxPick.resolveBinary(recorded: "/opt/homebrew/bin/tmux", exists: all, home: "/Users/dev")
+            == "/opt/homebrew/bin/tmux")
+        #expect(TmuxPick.resolveBinary(recorded: "/Users/dev/.local/bin/tmux", exists: { $0 != "/opt/homebrew/bin/tmux" },
+                                       home: "/Users/dev") == "/Users/dev/.local/bin/tmux")
+    }
+
+    /// The recorded path comes over the network: anything outside the fixed list is never run.
+    @Test func resolveBinaryIgnoresArbitraryRecordedPath() {
+        let all: (String) -> Bool = { _ in true }
+        #expect(TmuxPick.resolveBinary(recorded: "/tmp/evil", exists: all, home: "/Users/dev") == "/opt/homebrew/bin/tmux")
+        #expect(TmuxPick.resolveBinary(recorded: "/nix/bin/tmux", exists: all, home: "/Users/dev") == "/opt/homebrew/bin/tmux")
+        #expect(TmuxPick.resolveBinary(recorded: "/tmp/evil", exists: { $0 == "/tmp/evil" }, home: "/Users/dev") == nil)
+        // Another user's ~/.local/bin is not this user's.
+        #expect(TmuxPick.resolveBinary(recorded: "/Users/other/.local/bin/tmux", exists: { $0.hasPrefix("/Users/other") },
+                                       home: "/Users/dev") == nil)
     }
 
     @Test func resolveBinaryOrder() {
@@ -49,9 +64,25 @@ import Testing
         }
         let all: Set = ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/Users/dev/.local/bin/tmux", "/usr/bin/tmux"]
         #expect(pick(all, recorded: "/gone/tmux") == "/opt/homebrew/bin/tmux")
+        #expect(pick(all.subtracting(["/opt/homebrew/bin/tmux"]), recorded: "/opt/homebrew/bin/tmux") == "/usr/local/bin/tmux")
         #expect(pick(all.subtracting(["/opt/homebrew/bin/tmux"])) == "/usr/local/bin/tmux")
         #expect(pick(["/Users/dev/.local/bin/tmux", "/usr/bin/tmux"]) == "/Users/dev/.local/bin/tmux")
         #expect(pick(["/usr/bin/tmux"]) == "/usr/bin/tmux")
         #expect(pick([]) == nil)
+    }
+
+    @Test func socketOwnedByCurrentUserAllowed() {
+        #expect(TmuxPick.socketAllowed(path: "/private/tmp/tmux-501/default", owner: 501, currentUID: 501))
+    }
+
+    @Test func socketOwnedByAnotherUserRejected() {
+        #expect(!TmuxPick.socketAllowed(path: "/private/tmp/tmux-0/default", owner: 0, currentUID: 501))
+        #expect(!TmuxPick.socketAllowed(path: "/tmp/evil", owner: 502, currentUID: 501))
+    }
+
+    @Test func socketWithoutOwnerOrRelativeRejected() {
+        #expect(!TmuxPick.socketAllowed(path: "/private/tmp/tmux-501/gone", owner: nil, currentUID: 501))
+        #expect(!TmuxPick.socketAllowed(path: "tmux-501/default", owner: 501, currentUID: 501))
+        #expect(!TmuxPick.socketAllowed(path: "", owner: 501, currentUID: 501))
     }
 }

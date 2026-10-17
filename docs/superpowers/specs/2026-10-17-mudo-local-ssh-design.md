@@ -163,7 +163,7 @@ Rules, first match wins:
 
 ### 5.4 Local focus (`MuDo/LocalFocuser.swift`)
 
-All subprocesses run off the main thread with absolute paths: `/bin/ps`, `/usr/sbin/lsof`, and tmux from `tmuxBin`, else the first existing of `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, `~/.local/bin/tmux`, `/usr/bin/tmux`. The same in-flight guard as `ChromeTabFocuser` applies.
+All subprocesses run off the main thread with absolute paths: `/bin/ps`, `/usr/sbin/lsof`, and tmux from the first existing of `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, `~/.local/bin/tmux`, `/usr/bin/tmux`. `tmuxBin` comes over the network and is never run as given: it only moves its entry to the front when it equals one of these paths. `tmuxSocket` is passed to `-S` only when the socket is owned by the current user. The same in-flight guard as `ChromeTabFocuser` applies.
 
 Steps for `.local(terminal, cwd, project)`:
 
