@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"net"
 	"net/http"
 	"time"
 
@@ -16,7 +18,26 @@ import (
 )
 
 // Ingest accepts events from `mudod hook`. Bind it to localhost only.
-func Ingest(st *store.Store) http.Handler {
+// addr is the configured ingest host:port; requests from browsers (an Origin
+// header, a non-JSON body or a DNS-rebound Host) are refused.
+func Ingest(st *store.Store, addr string) http.Handler {
+	mux := ingestMux(st)
+	allowed := map[string]bool{addr: true}
+	if _, port, err := net.SplitHostPort(addr); err == nil {
+		allowed["localhost:"+port] = true
+		allowed["127.0.0.1:"+port] = true
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		if r.Header.Get("Origin") != "" || !allowed[r.Host] || mt != "application/json" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
+}
+
+func ingestMux(st *store.Store) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /event", func(w http.ResponseWriter, r *http.Request) {
 		var ev model.Event

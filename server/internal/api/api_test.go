@@ -175,10 +175,16 @@ func TestStreamPings(t *testing.T) {
 
 func TestIngest(t *testing.T) {
 	st := store.New(store.Options{Host: "devbox"})
-	srv := httptest.NewServer(Ingest(st))
+	srv := httptest.NewServer(Ingest(st, "127.0.0.1:7878"))
 	defer srv.Close()
 	post := func(body string) int {
-		resp, err := http.Post(srv.URL+"/event", "application/json", strings.NewReader(body))
+		req, err := http.NewRequest("POST", srv.URL+"/event", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Host = "127.0.0.1:7878"
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -197,12 +203,62 @@ func TestIngest(t *testing.T) {
 	if code := post(`{"agent":"claude","event":"prompt"}`); code != http.StatusBadRequest {
 		t.Errorf("missing session: %d", code)
 	}
-	resp, err := http.Get(srv.URL + "/event")
+	req, _ := http.NewRequest("GET", srv.URL+"/event", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Host = "127.0.0.1:7878"
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusMethodNotAllowed {
 		t.Errorf("GET: %d", resp.StatusCode)
+	}
+}
+
+func TestIngestRejectsBrowserRequests(t *testing.T) {
+	st := store.New(store.Options{Host: "devbox"})
+	srv := httptest.NewServer(Ingest(st, "127.0.0.1:7878"))
+	defer srv.Close()
+	const event = `{"agent":"claude","session_id":"s1","event":"prompt","cwd":"/w"}`
+	post := func(host, contentType, origin string) int {
+		t.Helper()
+		req, err := http.NewRequest("POST", srv.URL+"/event", strings.NewReader(event))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Host = host
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	for _, c := range []struct {
+		name, host, contentType, origin string
+		want                            int
+	}{
+		{"origin", "127.0.0.1:7878", "application/json", "https://evil.example", http.StatusForbidden},
+		{"text/plain", "127.0.0.1:7878", "text/plain", "", http.StatusForbidden},
+		{"no content type", "127.0.0.1:7878", "", "", http.StatusForbidden},
+		{"rebound host", "evil.example:7878", "application/json", "", http.StatusForbidden},
+		{"other port", "127.0.0.1:9999", "application/json", "", http.StatusForbidden},
+		{"hook", "127.0.0.1:7878", "application/json", "", http.StatusNoContent},
+		{"json with charset", "127.0.0.1:7878", "application/json; charset=utf-8", "", http.StatusNoContent},
+		{"localhost", "localhost:7878", "application/json", "", http.StatusNoContent},
+	} {
+		if got := post(c.host, c.contentType, c.origin); got != c.want {
+			t.Errorf("%s: %d, want %d", c.name, got, c.want)
+		}
+	}
+	if n := len(st.Snapshot()); n != 1 {
+		t.Fatalf("%d sessions, want 1", n)
 	}
 }
