@@ -131,7 +131,7 @@ Older app builds ignore the field.
 
 `Session` decodes an optional `terminal` into `TerminalInfo`. Because the decoder uses `.convertFromSnakeCase`, the Swift property names are exactly: `program`, `codeServer`, `tty`, `itermSession`, `tmuxSocket`, `tmuxPane`, `tmuxBin`, `sshClientIp`, `sshClientPort`, `sshServerIp`, `sshServerPort`. A decoding test asserts every field comes through non-nil.
 
-`ServerConfig.isLocal` is true when the daemon URL host is `127.0.0.1`, `::1` or `localhost`. It is the only way the app identifies the local server (toggle state, Off, upgrade, FocusPlan).
+`ServerConfig.isLocal` is true when the daemon URL host is `127.0.0.1`, `::1` or `localhost`; FocusPlan uses it (a loopback daemon always runs on this Mac). The server the toggle manages is marked explicitly: `ServerConfig.managedLocal` (decoded with a default of false, so older saved configs load). Toggle state, Off and upgrade act only on that server.
 
 **Validation before use** (`TerminalInfo.validated()` in MuDoCore, pure): drop any field that fails — `tty` `^/dev/ttys[0-9]+$`, `tmuxPane` `^%[0-9]+$`, `itermSession` `^[0-9A-Fa-f-]{36}$`, `tmuxSocket` and `tmuxBin` absolute paths without `..` or a leading `-`, ports 1–65535, IPs parseable. All subprocesses get argv arrays (never a shell), and every value inserted into AppleScript goes through `TabMatcher.quoted`.
 
@@ -190,10 +190,10 @@ For `.ssh(terminal, cwd, project)`, list local ssh connections (5.3 lsof parser)
 
 ### 5.6 "Monitor this Mac"
 
-- Settings gains a toggle **Monitor this Mac**; its state is "a server with `isLocal` exists".
+- Settings gains a toggle **Monitor this Mac**; its state is "a server with `managedLocal` exists"; On adds the server with `managedLocal` set. Enable, disable and upgrade are serialized (one at a time); the toggle is disabled while one runs.
   - On: run `Contents/Resources/mudod install --link-only`, parse the link with the existing `AddLink`, add it through the existing upsert-by-daemon-URL. Errors are shown in Settings with the command output.
   - Off: run `Contents/Resources/mudod uninstall` (the bundled binary always exists; uninstall matches hooks by the `~/.local/bin/mudod` path string). Remove the local server only when it succeeds; otherwise show the output.
-- On app launch, if a local server exists and the SHA-256 of `Contents/Resources/mudod` differs from `~/.local/bin/mudod`, re-run install to upgrade (version strings are constant across builds, so they cannot be used).
+- On app launch, if the managed local server exists and the SHA-256 of `Contents/Resources/mudod` differs from `~/.local/bin/mudod`, re-run install to upgrade (version strings are constant across builds, so they cannot be used).
 
 ## 6. Error handling
 

@@ -38,7 +38,7 @@ The devbox daemon is reachable on the LAN at `http://192.168.1.10:7879` (Tailsca
 
 ## Monitor this Mac
 
-Settings → This Mac → **Monitor this Mac** runs the bundled `mudod install --link-only` and adds the server `This Mac` (`http://127.0.0.1:7879`); off runs `mudod uninstall` and removes it only on success. The local server is the one whose daemon URL host is `127.0.0.1`, `::1` or `localhost`. On launch, if the bundled binary's SHA-256 differs from `~/.local/bin/mudod`, the app re-runs install to upgrade it.
+Settings → This Mac → **Monitor this Mac** runs the bundled `mudod install --link-only` and adds the server `This Mac` (`http://127.0.0.1:7879`); off runs `mudod uninstall` and removes it only on success. The toggle manages only the server it added (`managedLocal` in the saved config); a loopback server added by hand is still focused as local (`127.0.0.1`, `::1` or `localhost`) but is never installed, upgraded or removed by the toggle. On launch, if the bundled binary's SHA-256 differs from `~/.local/bin/mudod`, the app re-runs install to upgrade it.
 
 ## Permissions
 

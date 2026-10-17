@@ -41,7 +41,6 @@ struct SettingsView: View {
     @State private var linkError = false
     @State private var ignoredText = ""
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
-    @State private var localBusy = false
     @State private var localError: String?
 
     var body: some View {
@@ -52,8 +51,8 @@ struct SettingsView: View {
                     Toggle("Monitor this Mac", isOn: Binding(
                         get: { model.settings.localServer != nil },
                         set: { on in setMonitorLocal(on) }))
-                        .disabled(localBusy)
-                    if localBusy {
+                        .disabled(model.localDaemon.isBusy)
+                    if model.localDaemon.isBusy {
                         Spacer()
                         ProgressView().controlSize(.small)
                     }
@@ -121,15 +120,13 @@ struct SettingsView: View {
 
     /// On installs the bundled mudod and adds its server; off uninstalls it and removes the server.
     private func setMonitorLocal(_ on: Bool) {
-        guard !localBusy else { return }
-        localBusy = true
+        guard !model.localDaemon.isBusy else { return }
         localError = nil
         Task {
-            defer { localBusy = false }
             if on {
                 switch await model.localDaemon.enable() {
                 case let .success(draft):
-                    model.settings.add(draft)
+                    model.settings.add(draft, managedLocal: true)
                     model.applySettings()
                 case let .failure(error):
                     localError = error.output.isEmpty ? "mudod install failed" : error.output

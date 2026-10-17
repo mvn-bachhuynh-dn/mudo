@@ -22,8 +22,8 @@ final class AppSettings {
     @ObservationIgnored private var failedReads: Set<UUID> = []
 
     private(set) var servers: [ServerConfig]
-    /// The server for this Mac's own mudod, if added.
-    var localServer: ServerConfig? { servers.first(where: \.isLocal) }
+    /// The server added by Monitor this Mac, if any: the only one whose mudod the app manages.
+    var localServer: ServerConfig? { servers.first(where: \.managedLocal) }
     /// Set when a token save or read failed; nil after a successful save.
     private(set) var keychainError: String?
     var staleMinutes: Int {
@@ -90,17 +90,19 @@ final class AppSettings {
         }
     }
 
+    /// `managedLocal`: added by Monitor this Mac. Re-adding a server never clears the flag.
     @discardableResult
-    func add(_ draft: ServerDraft) -> ServerConfig {
+    func add(_ draft: ServerDraft, managedLocal: Bool = false) -> ServerConfig {
         if let i = servers.firstIndex(where: { $0.daemonURL == draft.daemonURL }) {
             servers[i].name = draft.name
+            if managedLocal { servers[i].managedLocal = true }
             if let cs = draft.codeServerURL { servers[i].codeServerURL = cs }
             setToken(draft.token, for: servers[i].id)
             save()
             return servers[i]
         }
         let config = ServerConfig(id: UUID(), name: draft.name, daemonURL: draft.daemonURL,
-                                  codeServerURL: draft.codeServerURL)
+                                  codeServerURL: draft.codeServerURL, managedLocal: managedLocal)
         servers.append(config)
         setToken(draft.token, for: config.id)
         save()
