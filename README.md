@@ -170,7 +170,18 @@ The app is signed ad-hoc. Run `app/scripts/make-signing-identity` once, rebuild,
 server/   Go module for mudod (cmd/mudod, internal/...)
 app/      Swift package: MuDoCore (logic, unit-tested) and MuDo (app)
 docs/     design spec and implementation plans
+.claude/workflows/  reusable Claude Code workflows (see below)
 ```
+
+### Claude Code workflows
+
+The repo ships [Claude Code workflows](https://code.claude.com/docs/en/workflows.md) that orchestrate subagents for the usual steps. Run them as slash commands in Claude Code:
+
+| Command | When | What it does |
+|---|---|---|
+| `/mudo-spec-review docs/superpowers/specs/<file>.md` | after writing a spec, before the plan | 4 reviewers (platform feasibility, codebase fit, edge cases, security), each checked by a skeptic |
+| `/mudo-task` with `{ plan, task }` | executing a plan, one task at a time | implement with TDD and commit, review spec + quality, up to 3 fix rounds |
+| `/mudo-review [base]` | before merging or pushing (default base `origin/main`) | review Go, Swift, tests and public-repo safety, each finding verified by a skeptic |
 
 ```bash
 cd server && make test build     # go test -race, then dist/mudod-linux-amd64
