@@ -14,6 +14,7 @@ final class AppModel {
     @ObservationIgnored var onNeedsCodeServer: (() -> Void)?
 
     @ObservationIgnored private let focuser = ChromeTabFocuser()
+    @ObservationIgnored private let localFocuser = LocalFocuser()
     @ObservationIgnored private let api = APIClient()
     @ObservationIgnored private var connections: [UUID: ServerConnection] = [:]
     @ObservationIgnored private var tokens: [UUID: String] = [:]
@@ -67,7 +68,7 @@ final class AppModel {
         tokens = tokens.filter { wanted[$0.key] != nil }
     }
 
-    /// Row click (spec 6.2): ack if done, clear snooze, focus the Chrome window.
+    /// Row click (spec 6.2): ack if done, clear snooze, focus per `FocusPlan` (spec 5.2).
     func open(_ row: SessionRow) {
         store.clearSnooze(row.id)
         guard let config = settings.servers.first(where: { $0.id == row.id.serverID }) else { return }
@@ -79,9 +80,13 @@ final class AppModel {
                 if !ok { store.markAckFailed(key) }
             }
         }
-        if let codeServer = config.codeServerURL {
-            focuser.focus(codeServer: codeServer, cwd: row.session.cwd, project: row.session.project)
-        } else {
+        let plan = FocusPlan.plan(server: config, session: row.session)
+        switch plan {
+        case let .chrome(codeServer, cwd, project):
+            focuser.focus(codeServer: codeServer, cwd: cwd, project: project)
+        case .local, .ssh:
+            localFocuser.focus(plan)
+        case .none:
             onNeedsCodeServer?()
         }
     }

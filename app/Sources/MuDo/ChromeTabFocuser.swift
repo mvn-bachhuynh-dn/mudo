@@ -10,13 +10,6 @@ final class ChromeTabFocuser {
     var onAutomationDenied: (() -> Void)?
     /// Called whenever a script runs successfully, i.e. Automation access is granted.
     var onAutomationAllowed: (() -> Void)?
-    private let queue = DispatchQueue(label: "dev.steve.MuDo.applescript")
-
-    private enum ScriptResult<T: Sendable>: Sendable {
-        case ok(T)
-        case denied
-        case failed
-    }
 
     private var inFlight = false
 
@@ -107,22 +100,7 @@ final class ChromeTabFocuser {
 
     private func run<T: Sendable>(_ source: String,
                                   parse: @escaping @Sendable (NSAppleEventDescriptor) -> T) async -> ScriptResult<T> {
-        let result: ScriptResult<T> = await withCheckedContinuation { continuation in
-            queue.async {
-                guard let script = NSAppleScript(source: source) else {
-                    continuation.resume(returning: .failed)
-                    return
-                }
-                var error: NSDictionary?
-                let output = script.executeAndReturnError(&error)
-                if let error {
-                    let code = error[NSAppleScript.errorNumber] as? Int ?? 0
-                    continuation.resume(returning: code == -1743 ? .denied : .failed)
-                    return
-                }
-                continuation.resume(returning: .ok(parse(output)))
-            }
-        }
+        let result = await AppleScriptRunner.run(source, parse: parse)
         if case .ok = result { onAutomationAllowed?() }
         return result
     }
