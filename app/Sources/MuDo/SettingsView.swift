@@ -41,10 +41,30 @@ struct SettingsView: View {
     @State private var linkError = false
     @State private var ignoredText = ""
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var localBusy = false
+    @State private var localError: String?
 
     var body: some View {
         @Bindable var settings = model.settings
         Form {
+            Section("This Mac") {
+                HStack {
+                    Toggle("Monitor this Mac", isOn: Binding(
+                        get: { model.settings.localServer != nil },
+                        set: { on in setMonitorLocal(on) }))
+                        .disabled(localBusy)
+                    if localBusy {
+                        Spacer()
+                        ProgressView().controlSize(.small)
+                    }
+                }
+                Text("Runs the bundled mudod here so local agent sessions show up.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let localError {
+                    Text(localError).font(.caption.monospaced()).foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
+            }
             Section("Servers") {
                 if let keychainError = settings.keychainError {
                     Text(keychainError).font(.caption).foregroundStyle(.red)
@@ -97,6 +117,35 @@ struct SettingsView: View {
         }
         linkError = false
         link = ""
+    }
+
+    /// On installs the bundled mudod and adds its server; off uninstalls it and removes the server.
+    private func setMonitorLocal(_ on: Bool) {
+        guard !localBusy else { return }
+        localBusy = true
+        localError = nil
+        Task {
+            defer { localBusy = false }
+            if on {
+                switch await model.localDaemon.enable() {
+                case let .success(draft):
+                    model.settings.add(draft)
+                    model.applySettings()
+                case let .failure(error):
+                    localError = error.output.isEmpty ? "mudod install failed" : error.output
+                }
+            } else {
+                switch await model.localDaemon.disable() {
+                case .success:
+                    if let local = model.settings.localServer {
+                        model.settings.remove(local.id)
+                        model.applySettings()
+                    }
+                case let .failure(error):
+                    localError = error.output.isEmpty ? "mudod uninstall failed" : error.output
+                }
+            }
+        }
     }
 
     private func setLaunchAtLogin(_ on: Bool) {

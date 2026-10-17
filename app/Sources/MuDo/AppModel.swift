@@ -9,6 +9,7 @@ import os
 final class AppModel {
     let settings: AppSettings
     let store = SessionStore()
+    let localDaemon = LocalDaemon()
     private(set) var automationDenied = false
     /// Called when a clicked session's server has no code-server URL to focus.
     @ObservationIgnored var onNeedsCodeServer: (() -> Void)?
@@ -31,6 +32,10 @@ final class AppModel {
         applySettings()
         startTimer()
         watchWakeAndNetwork()
+        // After an app update the bundled mudod may be newer than the installed one.
+        Task { [settings, localDaemon] in
+            if settings.localServer != nil { await localDaemon.upgradeIfNeeded() }
+        }
     }
 
     /// Pushes settings into the store and (re)builds connections whose config or token changed.

@@ -22,6 +22,8 @@ final class AppSettings {
     @ObservationIgnored private var failedReads: Set<UUID> = []
 
     private(set) var servers: [ServerConfig]
+    /// The server for this Mac's own mudod, if added.
+    var localServer: ServerConfig? { servers.first(where: \.isLocal) }
     /// Set when a token save or read failed; nil after a successful save.
     private(set) var keychainError: String?
     var staleMinutes: Int {

@@ -16,12 +16,16 @@ build:
 	swift build -c release --product MuDo
 
 app: build
+	@test -f Resources/mudod || { echo "Resources/mudod missing: run 'make -C server app-resource' on the Linux side first"; exit 1; }
 	rm -rf $(APP)
-	mkdir -p $(APP)/Contents/MacOS
+	mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
 	cp "$$(swift build -c release --show-bin-path)/MuDo" $(APP)/Contents/MacOS/MuDo
 	cp Resources/Info.plist $(APP)/Contents/Info.plist
+	cp Resources/mudod $(APP)/Contents/Resources/mudod
+	chmod 755 $(APP)/Contents/Resources/mudod
 	@if [ -f "$(SIGN_KEYCHAIN)" ] && [ -f "$(SIGN_PASS)" ]; then \
 		security unlock-keychain -p "$$(cat "$(SIGN_PASS)")" "$(SIGN_KEYCHAIN)"; fi
+	codesign --force --options runtime --sign "$(SIGN_ID)" $(if $(filter-out -,$(SIGN_ID)),--keychain "$(SIGN_KEYCHAIN)") $(APP)/Contents/Resources/mudod
 	codesign --force --sign "$(SIGN_ID)" $(if $(filter-out -,$(SIGN_ID)),--keychain "$(SIGN_KEYCHAIN)") $(APP)
 
 run: app
