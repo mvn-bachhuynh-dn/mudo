@@ -288,3 +288,80 @@ func TestSweepDoesNotRefreshCwdOfDeadSession(t *testing.T) {
 		t.Fatalf("ended session refreshed: %+v", got)
 	}
 }
+
+// blockingCwd returns a Cwd func that reports when it is called and blocks
+// until release is closed.
+func blockingCwd(cwd string) (fn func(int) (string, error), called chan struct{}, release chan struct{}) {
+	called, release = make(chan struct{}, 8), make(chan struct{})
+	fn = func(int) (string, error) {
+		called <- struct{}{}
+		<-release
+		return cwd, nil
+	}
+	return fn, called, release
+}
+
+func TestSweepDoesNotHoldLockDuringProcessCalls(t *testing.T) {
+	fn, called, release := blockingCwd("/w/real")
+	s := newCwdStore(t, &clock{t0}, nil, fn)
+	s.Apply(ev("s1", model.EvPrompt))
+
+	done := make(chan struct{})
+	go func() { s.Sweep(); close(done) }()
+	<-called
+
+	applied := make(chan struct{})
+	go func() { s.Apply(ev("s2", model.EvPrompt)); close(applied) }()
+	select {
+	case <-applied:
+	case <-time.After(time.Second):
+		t.Fatal("Apply blocked while Sweep waited on Cwd")
+	}
+
+	close(release)
+	<-done
+	for _, x := range s.Snapshot() {
+		if x.ID == "s1" && x.Cwd != "/w/real" {
+			t.Fatalf("swept cwd not applied: %+v", x)
+		}
+	}
+}
+
+func TestSweepSkipsResultWhenPIDChanged(t *testing.T) {
+	fn, called, release := blockingCwd("/w/stale")
+	s := newCwdStore(t, &clock{t0}, nil, fn)
+	s.Apply(ev("s1", model.EvPrompt))
+
+	done := make(chan struct{})
+	go func() { s.Sweep(); close(done) }()
+	<-called
+	e := ev("s1", model.EvPrompt)
+	e.PID, e.PIDStart = 43, 8
+	s.Apply(e)
+	close(release)
+	<-done
+
+	if got := s.Snapshot()[0]; got.Cwd != "/w/api" || got.PID != 43 {
+		t.Fatalf("stale cwd applied: %+v", got)
+	}
+}
+
+func TestSweepSkipsStaleEndWhenPIDChanged(t *testing.T) {
+	var s *Store
+	alive := func(pid int, _ uint64) bool {
+		if pid == 42 {
+			// The session moves to a new process while the old one is checked.
+			e := ev("s1", model.EvPrompt)
+			e.PID, e.PIDStart = 43, 8
+			s.Apply(e)
+			return false
+		}
+		return true
+	}
+	s = newCwdStore(t, &clock{t0}, alive, nil)
+	s.Apply(ev("s1", model.EvPrompt))
+	s.Sweep()
+	if got := s.Snapshot()[0]; got.State == model.StateEnded || got.PID != 43 {
+		t.Fatalf("stale end applied: %+v", got)
+	}
+}

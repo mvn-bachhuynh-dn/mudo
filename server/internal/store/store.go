@@ -150,25 +150,56 @@ func (s *Store) Subscribe(buf int) (<-chan Msg, []model.Session, func()) {
 }
 
 // Sweep ends sessions whose process is gone, re-reads the cwd of live ones
-// from their process, and deletes long-ended ones.
+// from their process, and deletes long-ended ones. Process calls run without
+// the lock (lsof can be slow), and their results are dropped if the session
+// moved to another process meanwhile.
 func (s *Store) Sweep() {
+	type probe struct {
+		id    string
+		pid   int
+		start uint64
+		alive bool
+		cwd   string
+	}
+	var probes []probe
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	now := s.now()
 	for id, x := range s.sessions {
 		switch {
-		case x.State != model.StateEnded && x.PID != 0 && !s.opts.Alive(x.PID, x.PIDStart):
-			s.put(machine.End(x, now))
 		case x.State != model.StateEnded && x.PID != 0:
-			// Alive: the hook-reported cwd may have drifted; trust the process.
-			if cwd, err := s.opts.Cwd(x.PID); err == nil && cwd != "" && cwd != x.Cwd {
-				x.Cwd, x.Project, x.UpdatedAt = cwd, machine.ProjectName(cwd), now
-				s.put(x)
-			}
+			probes = append(probes, probe{id: id, pid: x.PID, start: x.PIDStart})
 		case x.State == model.StateEnded && now.Sub(x.StateSince) >= s.opts.EndedTTL:
 			delete(s.sessions, id)
 			s.broadcast(Msg{Type: MsgRemove, ID: id})
 			s.markDirty()
+		}
+	}
+	s.mu.Unlock()
+
+	for i := range probes {
+		p := &probes[i]
+		if p.alive = s.opts.Alive(p.pid, p.start); p.alive {
+			if cwd, err := s.opts.Cwd(p.pid); err == nil {
+				p.cwd = cwd
+			}
+		}
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now = s.now()
+	for _, p := range probes {
+		x, ok := s.sessions[p.id]
+		if !ok || x.State == model.StateEnded || x.PID != p.pid || x.PIDStart != p.start {
+			continue
+		}
+		switch {
+		case !p.alive:
+			s.put(machine.End(x, now))
+		case p.cwd != "" && p.cwd != x.Cwd:
+			// Alive: the hook-reported cwd may have drifted; trust the process.
+			x.Cwd, x.Project, x.UpdatedAt = p.cwd, machine.ProjectName(p.cwd), now
+			s.put(x)
 		}
 	}
 }

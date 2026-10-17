@@ -28,3 +28,8 @@ func WriteFakeProcess(root string, pid int, comm string, ppid int, start uint64,
 	args := strings.ReplaceAll(cmdline, " ", "\x00") + "\x00"
 	return os.WriteFile(filepath.Join(dir, "cmdline"), []byte(args), 0o644)
 }
+
+// WriteFakeExe points /proc/<pid>/exe at target, like the real symlink.
+func WriteFakeExe(root string, pid int, target string) error {
+	return os.Symlink(target, filepath.Join(root, strconv.Itoa(pid), "exe"))
+}

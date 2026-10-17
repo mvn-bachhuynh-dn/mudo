@@ -7,3 +7,4 @@ DerivedData/
 .superpowers/
 .claude/settings.local.json
 app/.build/
+app/Resources/mudod

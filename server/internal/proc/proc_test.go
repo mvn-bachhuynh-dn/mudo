@@ -24,11 +24,17 @@ func fakeTree(t *testing.T) FS {
 		{700, 200, "kiro-cli-chat", 70, "kiro-cli chat"},
 		{800, 700, "sh", 80, "sh -c mudod hook --agent kiro"},
 		{900, 200, "tmux: server", 90, "tmux"},
+		{1000, 200, "2.1.144", 100, "claude --resume"},
+		{1100, 200, "2.1.144", 110, "2.1.144"},
+		{1200, 200, "zsh", 120, "-zsh"},
 	}
 	for _, p := range procs {
 		if err := WriteFakeProcess(root, p.pid, p.comm, p.ppid, p.start, p.cmdline); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := WriteFakeExe(root, 1100, "/Users/x/.local/share/claude/versions/2.1.144"); err != nil {
+		t.Fatal(err)
 	}
 	return FS{Root: root}
 }
@@ -109,5 +115,24 @@ func TestCwd(t *testing.T) {
 	}
 	if _, err := fs.Cwd(200); err == nil {
 		t.Error("process without cwd link must error")
+	}
+}
+
+func TestIsAgentByArgvAndExe(t *testing.T) {
+	fs := fakeTree(t)
+	cases := []struct {
+		name string
+		pid  int
+		comm string
+		want bool
+	}{
+		{"argv0 claude", 1000, "2.1.144", true},
+		{"versioned exe", 1100, "2.1.144", true},
+		{"shell", 1200, "zsh", false},
+	}
+	for _, c := range cases {
+		if got := fs.isAgent(c.pid, c.comm, "claude"); got != c.want {
+			t.Errorf("%s: isAgent = %v, want %v", c.name, got, c.want)
+		}
 	}
 }
