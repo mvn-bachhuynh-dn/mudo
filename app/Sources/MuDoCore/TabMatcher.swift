@@ -71,6 +71,16 @@ public enum TabMatcher {
         URLComponents(string: text)?.queryItems?.first(where: { $0.name == "folder" })?.value
     }
 
+    /// An AppleScript string literal: escapes backslash, quote, newline and carriage return.
+    public static func quoted(_ text: String) -> String {
+        let escaped = text
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+        return "\"\(escaped)\""
+    }
+
     static func trimSlash(_ path: String) -> String {
         var p = Substring(path)
         while p.hasSuffix("/") { p = p.dropLast() }
@@ -113,10 +123,5 @@ public enum ChromeScripts {
         """
     }
 
-    public static func quoted(_ text: String) -> String {
-        let escaped = text
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\"\(escaped)\""
-    }
+    public static func quoted(_ text: String) -> String { TabMatcher.quoted(text) }
 }

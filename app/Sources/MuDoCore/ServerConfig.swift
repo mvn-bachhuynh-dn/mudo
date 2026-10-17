@@ -15,6 +15,17 @@ public struct ServerConfig: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+extension ServerConfig {
+    /// The mudod on this Mac: the daemon URL host is a loopback name (spec 5.1).
+    public var isLocal: Bool {
+        guard var host = URLComponents(url: daemonURL, resolvingAgainstBaseURL: false)?.host?.lowercased() else {
+            return false
+        }
+        if host.hasPrefix("["), host.hasSuffix("]") { host = String(host.dropFirst().dropLast()) }
+        return ["127.0.0.1", "::1", "localhost"].contains(host)
+    }
+}
+
 public struct ServerDraft: Equatable, Sendable {
     public var name: String
     public var daemonURL: URL

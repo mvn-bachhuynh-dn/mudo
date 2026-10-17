@@ -45,3 +45,21 @@ import Testing
         #expect(try JSONDecoder().decode([ServerConfig].self, from: data) == [c])
     }
 }
+
+@Suite struct ServerConfigLocalTests {
+    func config(_ url: String) -> ServerConfig {
+        ServerConfig(id: UUID(), name: "a", daemonURL: URL(string: url)!, codeServerURL: nil)
+    }
+
+    @Test func loopbackIsLocal() {
+        for url in ["http://127.0.0.1:7879", "http://[::1]:7879", "http://localhost:7879", "http://LOCALHOST:7879"] {
+            #expect(config(url).isLocal, "\(url)")
+        }
+    }
+
+    @Test func remoteIsNotLocal() {
+        for url in ["http://[fd7a:115c:a1e0::10]:7879", "http://100.64.0.10:7879", "http://devbox:7879", "http://127.0.0.2:7879"] {
+            #expect(!config(url).isLocal, "\(url)")
+        }
+    }
+}
