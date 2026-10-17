@@ -229,3 +229,58 @@ func TestTerminal(t *testing.T) {
 		t.Fatalf("nil terminal: changed=%v terminal=%+v", changed, got.Terminal)
 	}
 }
+
+// A hook that captured only part of the terminal keeps the rest of the stored one.
+func TestTerminalMergesFieldByField(t *testing.T) {
+	later := t0.Add(time.Minute)
+	stored := model.Terminal{
+		Program: "iTerm.app", TTY: "/dev/ttys004", ITermSession: "0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9",
+		SSHClientIP: "100.64.0.20", SSHClientPort: 52000, SSHServerIP: "100.64.0.10", SSHServerPort: 22,
+	}
+	apply := func(v model.Terminal) (model.Terminal, bool) {
+		prev := session(model.StateRunning)
+		s := stored
+		prev.Terminal = &s
+		ev := event(model.EvTool)
+		ev.Terminal = &v
+		got, changed := Apply(prev, ev, "devbox", later)
+		if *prev.Terminal != stored {
+			t.Fatalf("prev mutated: %+v", prev.Terminal)
+		}
+		return *got.Terminal, changed
+	}
+
+	// TTY empty in the event: kept.
+	got, changed := apply(model.Terminal{Program: "iTerm.app"})
+	if changed || got != stored {
+		t.Fatalf("empty tty: changed=%v terminal=%+v", changed, got)
+	}
+
+	// A new TTY replaces the stored one; the rest stays.
+	got, changed = apply(model.Terminal{TTY: "/dev/ttys009"})
+	want := stored
+	want.TTY = "/dev/ttys009"
+	if !changed || got != want {
+		t.Fatalf("new tty: changed=%v terminal=%+v", changed, got)
+	}
+
+	// SSH fields empty in the event: kept, while new fields are added.
+	got, changed = apply(model.Terminal{Program: "iTerm.app", TmuxPane: "%3", TmuxSocket: "/tmp/tmux-1000/default"})
+	want = stored
+	want.TmuxPane, want.TmuxSocket = "%3", "/tmp/tmux-1000/default"
+	if !changed || got != want {
+		t.Fatalf("ssh kept: changed=%v terminal=%+v", changed, got)
+	}
+
+	// New SSH fields replace the stored ones.
+	got, _ = apply(model.Terminal{SSHClientIP: "100.64.0.21", SSHClientPort: 53000, SSHServerIP: "100.64.0.10", SSHServerPort: 22})
+	if got.SSHClientIP != "100.64.0.21" || got.SSHClientPort != 53000 || got.TTY != stored.TTY {
+		t.Fatalf("new ssh: terminal=%+v", got)
+	}
+
+	// CodeServer stays true once seen.
+	got, changed = apply(model.Terminal{CodeServer: true})
+	if !changed || !got.CodeServer {
+		t.Fatalf("code server set: changed=%v terminal=%+v", changed, got)
+	}
+}
