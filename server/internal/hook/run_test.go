@@ -163,3 +163,43 @@ func TestRunRecoversFromPanic(t *testing.T) {
 		t.Fatalf("log = %q, want panic entry", data)
 	}
 }
+
+func TestRunSendsTerminal(t *testing.T) {
+	srv, got := capture(t)
+	o := options(t, srv.URL, `{"hook_event_name":"Stop","session_id":"abc"}`)
+	o.Env = envOf(map[string]string{"TERM_PROGRAM": "iTerm.app", "TMUX_PANE": "%3"})
+	o.Terminal = TerminalDeps{GOOS: "darwin", TTY: func(pid int) string {
+		if pid != 300 {
+			t.Errorf("TTY pid = %d, want 300", pid)
+		}
+		return "ttys004"
+	}}
+	Run(o)
+	ev := next(t, got)
+	want := model.Terminal{Program: "iTerm.app", TmuxPane: "%3", TTY: "/dev/ttys004"}
+	if ev.Terminal == nil || *ev.Terminal != want {
+		t.Fatalf("terminal = %+v, want %+v", ev.Terminal, want)
+	}
+}
+
+func TestRunCwdOnStartOnly(t *testing.T) {
+	for _, c := range []struct {
+		payload  string
+		fromProc bool
+	}{
+		{`{"hook_event_name":"PreToolUse","session_id":"abc","cwd":"/w/api/drifted"}`, false},
+		{`{"hook_event_name":"SessionStart","session_id":"abc","cwd":"/w/api/drifted"}`, true},
+	} {
+		srv, got := capture(t)
+		o := options(t, srv.URL, c.payload)
+		o.CwdOnStartOnly = true
+		if err := proc.WriteFakeCwd(o.Proc.Root, 300, "/w/api"); err != nil {
+			t.Fatal(err)
+		}
+		Run(o)
+		ev := next(t, got)
+		if ev.CwdFromProc != c.fromProc || (ev.Cwd == "/w/api") != c.fromProc {
+			t.Errorf("%s: got %+v", ev.Kind, ev)
+		}
+	}
+}

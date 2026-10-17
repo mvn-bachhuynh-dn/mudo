@@ -190,3 +190,42 @@ func TestEmptyCwdAdoptsFirstNonEmpty(t *testing.T) {
 		t.Fatalf("later drift: cwd=%q, want /w/api", got.Cwd)
 	}
 }
+
+func TestTerminal(t *testing.T) {
+	term := model.Terminal{Program: "iTerm.app", TTY: "/dev/ttys004"}
+	withTerm := func(k model.EventKind, v model.Terminal) model.Event {
+		ev := event(k)
+		ev.Terminal = &v
+		return ev
+	}
+	later := t0.Add(time.Minute)
+
+	got, _ := Apply(nil, withTerm(model.EvSessionStart, term), "devbox", t0)
+	if got.Terminal == nil || *got.Terminal != term {
+		t.Fatalf("new session terminal = %+v", got.Terminal)
+	}
+
+	got, changed := Apply(session(model.StateRunning), withTerm(model.EvTool, term), "devbox", later)
+	if !changed || got.Terminal == nil || *got.Terminal != term || !got.UpdatedAt.Equal(later) {
+		t.Fatalf("first terminal: changed=%v terminal=%+v", changed, got.Terminal)
+	}
+
+	prev := session(model.StateRunning)
+	same := term
+	prev.Terminal = &same
+	got, changed = Apply(prev, withTerm(model.EvTool, term), "devbox", later)
+	if changed || *got.Terminal != term {
+		t.Fatalf("equal terminal: changed=%v terminal=%+v", changed, got.Terminal)
+	}
+
+	other := model.Terminal{Program: "iTerm.app", TTY: "/dev/ttys005"}
+	got, changed = Apply(prev, withTerm(model.EvTool, other), "devbox", later)
+	if !changed || *got.Terminal != other || *prev.Terminal != term {
+		t.Fatalf("new terminal: changed=%v terminal=%+v prev=%+v", changed, got.Terminal, prev.Terminal)
+	}
+
+	got, changed = Apply(prev, event(model.EvTool), "devbox", later)
+	if changed || got.Terminal == nil || *got.Terminal != term {
+		t.Fatalf("nil terminal: changed=%v terminal=%+v", changed, got.Terminal)
+	}
+}

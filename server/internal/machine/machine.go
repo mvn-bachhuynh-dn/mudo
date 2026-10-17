@@ -21,6 +21,7 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 			State: initialState(ev.Kind), StateSince: now,
 			PID: ev.PID, PIDStart: ev.PIDStart,
 			LastPrompt: ev.Prompt, UpdatedAt: now,
+			Terminal: ev.Terminal,
 		}, true
 	}
 
@@ -39,6 +40,12 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 	}
 	if ev.Kind == model.EvPrompt && ev.Prompt != s.LastPrompt {
 		s.LastPrompt = ev.Prompt
+		changed = true
+	}
+	// A hook that knows nothing about its terminal keeps the stored one.
+	if ev.Terminal != nil && (s.Terminal == nil || *ev.Terminal != *s.Terminal) {
+		t := *ev.Terminal
+		s.Terminal = &t
 		changed = true
 	}
 	if next := transition(s.State, ev.Kind); next != s.State {
