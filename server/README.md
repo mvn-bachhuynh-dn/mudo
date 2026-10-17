@@ -11,7 +11,7 @@ make test build    # produces dist/mudod-linux-amd64 and dist/mudod-darwin-arm64
 make app-resource  # also copies the darwin binary to ../app/Resources/mudod for the Mac app
 ```
 
-`make test` runs `go test -race` and also `GOOS=darwin GOARCH=arm64 go build ./...` and `go vet ./...`, so darwin-only files are checked from Linux. On darwin, process inspection uses `sysctl` (`kern.proc.pid`, `kern.procargs2`) and `/usr/sbin/lsof` for the working directory, instead of `/proc`.
+`make test` runs `go test -race` and also `GOOS=darwin GOARCH=arm64 go build ./...` and `go vet ./...`, so darwin-only files are checked from Linux. On darwin, process inspection uses `sysctl` (`kern.proc.pid`, `kern.procargs2`) and `/usr/sbin/lsof` for the working directory, instead of `/proc`. The fake-`/proc` tests are Linux-only; `MUDO_MAC=user@my-mac make test-darwin-live` cross-compiles the proc tests, copies the binary to the build Mac and runs the live darwin checks there.
 
 ## Install on a server
 

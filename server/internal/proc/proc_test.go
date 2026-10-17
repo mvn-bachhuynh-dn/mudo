@@ -1,3 +1,7 @@
+//go:build linux
+
+// The fake process tree is a /proc directory, which only the Linux backend reads.
+
 package proc
 
 import (
