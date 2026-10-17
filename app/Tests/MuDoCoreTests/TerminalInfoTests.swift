@@ -37,7 +37,7 @@ import Testing
     }
 
     @Test func dropsBadPaths() {
-        for bad in ["-x", "/a/../b", "relative/tmux", ""] {
+        for bad in ["-x", "/a/../b", "relative/tmux", "", "/tmp/a\nb", "/tmp/a\u{7}"] {
             var t = Self.full
             t.tmuxSocket = bad
             t.tmuxBin = bad

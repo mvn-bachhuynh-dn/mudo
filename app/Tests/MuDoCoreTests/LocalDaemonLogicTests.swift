@@ -35,6 +35,7 @@ import Testing
 
     @Test func linkIsTakenFromTheLastMatchingLine() throws {
         let output = """
+        mudo://add?name=This%20Mac&token=old&url=http%3A%2F%2F127.0.0.1%3A7879
         warning: port 7879 is busy, using 7880
         mudo://add?name=This%20Mac&token=t&url=http%3A%2F%2F127.0.0.1%3A7880
 

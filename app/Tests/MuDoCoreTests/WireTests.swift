@@ -81,7 +81,10 @@ import Testing
 
     @Test func missingTerminalIsNil() throws {
         let msg = try #require(try StreamMessage.decode(event: "snapshot", data: Self.snapshotJSON))
-        guard case let .snapshot(_, _, sessions) = msg else { return }
+        guard case let .snapshot(_, _, sessions) = msg else {
+            Issue.record("expected snapshot, got \(msg)")
+            return
+        }
         #expect(sessions[0].terminal == nil)
     }
 
