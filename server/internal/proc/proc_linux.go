@@ -51,11 +51,3 @@ func (f FS) argv(pid int) (string, []string) {
 	}
 	return exe, strings.Split(strings.TrimSuffix(string(b), "\x00"), "\x00")
 }
-
-func (f FS) cmdline(pid int) string {
-	b, err := os.ReadFile(filepath.Join(f.Root, strconv.Itoa(pid), "cmdline"))
-	if err != nil {
-		return ""
-	}
-	return strings.ReplaceAll(string(b), "\x00", " ")
-}

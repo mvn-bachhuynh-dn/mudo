@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"io"
@@ -78,18 +77,8 @@ func tmuxClientSSH(bin, socket, pane string) string {
 	if session == "" {
 		return ""
 	}
-	var best int64 = -1
-	pid := ""
 	clients := output(bin, "-S", socket, "list-clients", "-t", session, "-F", "#{client_activity} #{client_pid}")
-	for _, line := range strings.Split(clients, "\n") {
-		f := strings.Fields(line)
-		if len(f) != 2 {
-			continue
-		}
-		if act, err := strconv.ParseInt(f[0], 10, 64); err == nil && act > best {
-			best, pid = act, f[1]
-		}
-	}
+	pid := hook.PickClientPID(clients)
 	if pid == "" {
 		return ""
 	}
@@ -97,10 +86,5 @@ func tmuxClientSSH(bin, socket, pane string) string {
 	if err != nil {
 		return ""
 	}
-	for _, kv := range bytes.Split(env, []byte{0}) {
-		if v, ok := bytes.CutPrefix(kv, []byte("SSH_CONNECTION=")); ok {
-			return string(v)
-		}
-	}
-	return ""
+	return hook.SSHFromEnviron(env)
 }

@@ -55,13 +55,13 @@ func (f FS) isAgent(pid int, comm, agent string) bool {
 		if comm == "claude" {
 			return true
 		}
-		cmd := f.cmdline(pid)
+		exe, args := f.argv(pid)
+		cmd := strings.Join(args, " ")
 		if comm == "node" && strings.Contains(cmd, "claude") {
 			return true
 		}
 		// The native installer runs a binary named after its version, so
 		// comm is e.g. "2.1.144"; argv0 or the versions path gives it away.
-		exe, args := f.argv(pid)
 		if len(args) > 0 && filepath.Base(args[0]) == "claude" {
 			return true
 		}

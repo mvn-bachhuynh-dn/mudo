@@ -6,7 +6,6 @@ import (
 	"context"
 	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -42,9 +41,4 @@ func (f FS) argv(pid int) (string, []string) {
 		return "", nil
 	}
 	return exe, args
-}
-
-func (f FS) cmdline(pid int) string {
-	_, args := f.argv(pid)
-	return strings.Join(args, " ")
 }
