@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14">
+  <title>MuDo architecture</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #d0d7de; stroke-width: 1.5; }
+      .zone { fill: #f6f8fa; stroke: #d0d7de; stroke-width: 1.5; }
+      .agent { fill: #fff8c5; stroke: #d4a72c; stroke-width: 1.5; }
+      .daemon { fill: #ddf4ff; stroke: #54aeff; stroke-width: 1.5; }
+      .app { fill: #dafbe1; stroke: #4ac26b; stroke-width: 1.5; }
+      .h { font-weight: 600; fill: #1f2328; }
+      .t { fill: #1f2328; }
+      .s { fill: #57606a; font-size: 12px; }
+      .line { stroke: #57606a; stroke-width: 1.6; fill: none; }
+      .dash { stroke-dasharray: 6 4; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="880" height="470" rx="12" fill="#ffffff"/>
+
+  <!-- Linux server -->
+  <rect class="zone" x="20" y="20" width="390" height="250" rx="10"/>
+  <text class="h" x="36" y="46">Linux server (each one)</text>
+  <rect class="agent" x="40" y="62" width="160" height="58" rx="8"/>
+  <text class="t" x="120" y="88" text-anchor="middle">claude / kiro-cli</text>
+  <text class="s" x="120" y="106" text-anchor="middle">hooks: mudod hook</text>
+  <rect class="daemon" x="40" y="160" width="350" height="92" rx="8"/>
+  <text class="h" x="56" y="184">mudod serve</text>
+  <text class="s" x="56" y="204">systemd --user · session state machine</text>
+  <text class="s" x="56" y="222">PID liveness check every 10 s · state.json</text>
+  <text class="s" x="56" y="240">API on :7879 (bearer token)</text>
+  <path class="line" d="M120,120 L120,158" marker-end="url(#arrow)"/>
+  <text class="s" x="128" y="144">POST 127.0.0.1:7878/event</text>
+
+  <!-- Mac -->
+  <rect class="zone" x="470" y="20" width="390" height="430" rx="10"/>
+  <text class="h" x="486" y="46">Mac</text>
+  <rect class="app" x="490" y="62" width="350" height="128" rx="8"/>
+  <text class="h" x="506" y="86">MuDo.app (floating widget)</text>
+  <text class="s" x="506" y="106">one SSE stream per server</text>
+  <text class="s" x="506" y="124">pill: running · waiting · done counts</text>
+  <text class="s" x="506" y="142">click a session: focus where it runs</text>
+  <text class="s" x="506" y="160">Chrome tab · terminal tab · editor window</text>
+
+  <rect class="agent" x="490" y="300" width="160" height="58" rx="8"/>
+  <text class="t" x="570" y="326" text-anchor="middle">claude / kiro-cli</text>
+  <text class="s" x="570" y="344" text-anchor="middle">local terminals</text>
+  <rect class="daemon" x="490" y="380" width="350" height="56" rx="8"/>
+  <text class="h" x="506" y="403">mudod (LaunchAgent)</text>
+  <text class="s" x="506" y="422">"Monitor this Mac" · API on 127.0.0.1:7879</text>
+  <path class="line" d="M570,358 L570,378" marker-end="url(#arrow)"/>
+  <path class="line" d="M760,380 L760,192" marker-end="url(#arrow)"/>
+  <text class="s" x="768" y="280">SSE</text>
+
+  <!-- server stream -->
+  <path class="line" d="M390,180 L488,180" marker-end="url(#arrow)"/>
+  <text class="s" x="440" y="172" text-anchor="middle">SSE</text>
+  <text class="s" x="440" y="198" text-anchor="middle">Tailscale</text>
+  <text class="s" x="440" y="214" text-anchor="middle">or LAN</text>
+
+  <!-- ssh -->
+  <path class="line dash" d="M488,329 L215,329 L215,272" marker-end="url(#arrow)"/>
+  <text class="s" x="230" y="320">ssh from a Mac terminal (optional)</text>
+</svg>

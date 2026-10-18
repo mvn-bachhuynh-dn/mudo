@@ -17,6 +17,13 @@ import Testing
         #expect(AddLink.parse(url)?.codeServerURL == URL(string: "http://h:8080"))
     }
 
+    /// mudod builds links with Go's url.Values, which writes a space as "+" and a "+" as %2B.
+    @Test func plusIsSpace() throws {
+        let url = try #require(URL(string: "mudo://add?name=This+Mac&token=a%2Bb&url=http%3A%2F%2F127.0.0.1%3A7879"))
+        #expect(AddLink.parse(url)?.name == "This Mac")
+        #expect(AddLink.parse(url)?.token == "a+b")
+    }
+
     @Test func nameDefaultsToHost() throws {
         let url = try #require(URL(string: "mudo://add?token=t&url=http%3A%2F%2Fdevbox%3A7879"))
         #expect(AddLink.parse(url)?.name == "devbox")
