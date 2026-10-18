@@ -60,9 +60,12 @@ public enum AddLink {
         guard let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
               comps.scheme?.lowercased() == "mudo",
               comps.host?.lowercased() == "add" else { return nil }
-        let items = comps.queryItems ?? []
+        // Form encoding (Go's url.Values): "+" is a space, a literal "+" is %2B.
+        let items = comps.percentEncodedQueryItems ?? []
         func value(_ name: String) -> String? {
-            guard let v = items.first(where: { $0.name == name })?.value, !v.isEmpty else { return nil }
+            guard let raw = items.first(where: { $0.name == name })?.value,
+                  let v = raw.replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
+                  !v.isEmpty else { return nil }
             return v
         }
         guard let token = value("token"),
