@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Runs a copy of MuDo against a fake mudod on this Mac, for screenshots:
+# scripted sessions only, the real app's servers and settings are untouched.
+#   scripts/demo        start (MuDo Demo + fake mudod on 127.0.0.1:7881)
+#   scripts/demo stop   quit both and remove the demo copy, settings and token
+set -euo pipefail
+src=/Applications/MuDo.app
+demo="$HOME/Library/Caches/MuDo Demo.app"
+id=dev.steve.MuDo.demo
+addr=127.0.0.1:7881
+
+stop() {
+	osascript -e 'quit app "MuDo Demo"' 2>/dev/null || true
+	pkill -f "mudod fake --addr $addr" 2>/dev/null || true
+	# The demo server's token, saved by the demo copy under the shared Keychain service.
+	local ids
+	ids=$(defaults export "$id" - 2>/dev/null | plutil -extract servers raw -o - - 2>/dev/null \
+		| base64 -D | grep -o '"id":"[^"]*"' | cut -d'"' -f4 || true)
+	for u in $ids; do security delete-generic-password -s dev.steve.MuDo -a "$u" >/dev/null 2>&1 || true; done
+	defaults delete "$id" 2>/dev/null || true
+	rm -rf "$demo"
+}
+
+if [[ "${1:-}" == stop ]]; then stop; exit 0; fi
+[[ -d "$src" ]] || { echo "install MuDo first (make install)" >&2; exit 1; }
+stop
+
+nohup "$src/Contents/Resources/mudod" fake --addr "$addr" --token fake-token --step 4s \
+	>/dev/null 2>&1 &
+
+cp -R "$src" "$demo"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $id" \
+	-c "Set :CFBundleName MuDo Demo" "$demo/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$demo/Contents/Info.plist" 2>/dev/null || true
+codesign --force --sign - "$demo" 2>/dev/null
+
+open "$demo"
+sleep 2
+# Handing the add link to the demo copy itself keeps it away from the real app, and lets
+# the app store the token (the Keychain refuses writes from an SSH session).
+open -a "$demo" "mudo://add?name=devbox&url=http%3A%2F%2F$addr&token=fake-token"
+echo "MuDo Demo is running. Take screenshots, then: scripts/demo stop"
