@@ -7,8 +7,11 @@ Overview, full install steps and troubleshooting: see the [top-level README](../
 ## Build
 
 ```bash
-make test build    # produces dist/mudod-linux-amd64
+make test build    # produces dist/mudod-linux-amd64 and dist/mudod-darwin-arm64
+make app-resource  # also copies the darwin binary to ../app/Resources/mudod for the Mac app
 ```
+
+`make test` runs `go test -race` and also `GOOS=darwin GOARCH=arm64 go build ./...` and `go vet ./...`, so darwin-only files are checked from Linux. On darwin, process inspection uses `sysctl` (`kern.proc.pid`, `kern.procargs2`) and `/usr/sbin/lsof` for the working directory, instead of `/proc`. The fake-`/proc` tests are Linux-only; `MUDO_MAC=user@my-mac make test-darwin-live` cross-compiles the proc tests, copies the binary to the build Mac and runs the live darwin checks there.
 
 ## Install on a server
 
@@ -38,6 +41,37 @@ XDG_RUNTIME_DIR=/run/user/$(id -u) ~/.local/bin/mudod install
 Kiro hooks fire only in the interactive `kiro-cli chat` TUI, not with `--no-interactive`.
 
 Running `install` again upgrades the binary and keeps the token.
+
+## Install on macOS
+
+The Mac app installs the bundled binary itself (Settings → **Monitor this Mac**), by running:
+
+```bash
+MuDo.app/Contents/Resources/mudod install --link-only
+```
+
+On darwin, `install`:
+
+- copies the binary to `~/.local/bin/mudod`
+- writes `~/.config/mudo/config.toml` with `api_addr = "127.0.0.1:7879"` (no Tailscale lookup; an existing config is kept, with a warning if its `api_addr` is not loopback)
+- writes the LaunchAgent `~/Library/LaunchAgents/dev.mudo.mudod.plist` (`mudod serve`, `RunAtLoad`, `KeepAlive`, log `~/Library/Logs/mudod.log`), then `launchctl bootout` + `launchctl bootstrap gui/<uid>` (bootstrap retried up to 5 times)
+- adds the same Claude Code and Kiro hooks as on Linux
+- prints a `mudo://add?...` link with name `This Mac` and url `http://127.0.0.1:<port>` (port from `api_addr`)
+
+`--link-only` prints only the link on stdout (warnings go to stderr), so a caller can parse it. `uninstall` on darwin boots out the LaunchAgent, removes the plist and the hooks.
+
+```bash
+launchctl print gui/$(id -u)/dev.mudo.mudod
+tail -f ~/Library/Logs/mudod.log
+```
+
+## Ingest hardening
+
+The hook endpoint (`127.0.0.1:7878/event`) answers 403 to any request with an `Origin` header, a `Content-Type` other than `application/json`, or a `Host` that is not the ingest's own loopback address. This stops a web page in a local browser from posting fake events; `mudod hook` sends none of these. It applies on Linux and macOS.
+
+## Terminal info
+
+The hook records where the agent runs (`TERM_PROGRAM`, code-server, TTY, iTerm2 session id, tmux socket/pane/binary, `SSH_CONNECTION`) and the daemon stores it on the session as `terminal`, so the app can focus the right terminal tab or editor window. Inside tmux on a server, `SSH_CONNECTION` is taken from the most recently active tmux client. Missing fields never fail the hook.
 
 ## Check it works
 

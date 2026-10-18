@@ -21,6 +21,7 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 			State: initialState(ev.Kind), StateSince: now,
 			PID: ev.PID, PIDStart: ev.PIDStart,
 			LastPrompt: ev.Prompt, UpdatedAt: now,
+			Terminal: ev.Terminal,
 		}, true
 	}
 
@@ -41,6 +42,20 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 		s.LastPrompt = ev.Prompt
 		changed = true
 	}
+	// A hook that knows nothing about its terminal keeps the stored one; one
+	// that knows part of it updates only the fields it captured.
+	if ev.Terminal != nil {
+		t := *ev.Terminal
+		// A session_start (new or resumed agent process) describes the
+		// terminal afresh; later events only fill in what they know.
+		if s.Terminal != nil && ev.Kind != model.EvSessionStart {
+			t = mergeTerminal(*s.Terminal, t)
+		}
+		if s.Terminal == nil || t != *s.Terminal {
+			s.Terminal = &t
+			changed = true
+		}
+	}
 	if next := transition(s.State, ev.Kind); next != s.State {
 		s.State, s.StateSince = next, now
 		changed = true
@@ -49,6 +64,36 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 		s.UpdatedAt = now
 	}
 	return s, changed
+}
+
+// mergeTerminal overlays the non-empty fields of next on old. CodeServer
+// stays true once seen.
+func mergeTerminal(old, next model.Terminal) model.Terminal {
+	str := func(o, n string) string {
+		if n != "" {
+			return n
+		}
+		return o
+	}
+	num := func(o, n int) int {
+		if n != 0 {
+			return n
+		}
+		return o
+	}
+	return model.Terminal{
+		Program:       str(old.Program, next.Program),
+		CodeServer:    old.CodeServer || next.CodeServer,
+		TTY:           str(old.TTY, next.TTY),
+		ITermSession:  str(old.ITermSession, next.ITermSession),
+		TmuxSocket:    str(old.TmuxSocket, next.TmuxSocket),
+		TmuxPane:      str(old.TmuxPane, next.TmuxPane),
+		TmuxBin:       str(old.TmuxBin, next.TmuxBin),
+		SSHClientIP:   str(old.SSHClientIP, next.SSHClientIP),
+		SSHClientPort: num(old.SSHClientPort, next.SSHClientPort),
+		SSHServerIP:   str(old.SSHServerIP, next.SSHServerIP),
+		SSHServerPort: num(old.SSHServerPort, next.SSHServerPort),
+	}
 }
 
 // Ack marks a done session as seen by the user.

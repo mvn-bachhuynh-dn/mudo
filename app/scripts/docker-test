@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Runs the MuDoCore tests on Linux in the official Swift image, for when the
+# build Mac is unreachable. The MuDo app target (AppKit) is macOS-only and is
+# not built here.
+set -euo pipefail
+here="$(cd "$(dirname "$0")/.." && pwd)"
+exec docker run --rm -v "$here:/app:ro" -w /app swift:6.2 \
+  swift test --scratch-path /tmp/mudo-build "$@"

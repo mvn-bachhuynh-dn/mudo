@@ -44,4 +44,39 @@ import Testing
         let data = try JSONEncoder().encode([c])
         #expect(try JSONDecoder().decode([ServerConfig].self, from: data) == [c])
     }
+
+    @Test func roundTripsManagedLocal() throws {
+        let c = ServerConfig(id: UUID(), name: "This Mac", daemonURL: URL(string: "http://127.0.0.1:7879")!,
+                             codeServerURL: nil, managedLocal: true)
+        let data = try JSONEncoder().encode([c])
+        #expect(try JSONDecoder().decode([ServerConfig].self, from: data) == [c])
+    }
+
+    /// A config saved before `managedLocal` existed still loads, as not managed.
+    @Test func decodesConfigWithoutManagedLocal() throws {
+        let json = #"[{"id":"6F1A2B3C-4D5E-4F60-8172-93A4B5C6D7E8","name":"devbox","daemonURL":"http:\/\/100.64.0.10:7879"}]"#
+        let configs = try JSONDecoder().decode([ServerConfig].self, from: Data(json.utf8))
+        #expect(configs.count == 1)
+        #expect(configs[0].name == "devbox")
+        #expect(configs[0].codeServerURL == nil)
+        #expect(!configs[0].managedLocal)
+    }
+}
+
+@Suite struct ServerConfigLocalTests {
+    func config(_ url: String) -> ServerConfig {
+        ServerConfig(id: UUID(), name: "a", daemonURL: URL(string: url)!, codeServerURL: nil)
+    }
+
+    @Test func loopbackIsLocal() {
+        for url in ["http://127.0.0.1:7879", "http://[::1]:7879", "http://localhost:7879", "http://LOCALHOST:7879"] {
+            #expect(config(url).isLocal, "\(url)")
+        }
+    }
+
+    @Test func remoteIsNotLocal() {
+        for url in ["http://[fd7a:115c:a1e0::10]:7879", "http://100.64.0.10:7879", "http://devbox:7879", "http://127.0.0.2:7879"] {
+            #expect(!config(url).isLocal, "\(url)")
+        }
+    }
 }

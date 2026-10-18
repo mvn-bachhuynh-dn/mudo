@@ -30,7 +30,7 @@ func installOptions() (install.Options, error) {
 		return install.Options{}, err
 	}
 	return install.Options{
-		Home: p.Home, Self: self, Hostname: host, User: u.Username, Now: time.Now,
+		Home: p.Home, Self: self, Hostname: host, User: u.Username, UID: os.Getuid(), Now: time.Now,
 		Exec: func(name string, args ...string) (string, error) {
 			out, err := exec.Command(name, args...).CombinedOutput()
 			return string(out), err
@@ -41,6 +41,7 @@ func installOptions() (install.Options, error) {
 func runInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	codeServer := fs.String("code-server", "", "optional code-server `url` (http/https) to include in the add link")
+	linkOnly := fs.Bool("link-only", false, "print only the add link on stdout (warnings go to stderr)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -50,11 +51,19 @@ func runInstall(args []string) error {
 	}
 	o.CodeServer = *codeServer
 	res, err := install.Run(o)
+	warnTo := os.Stdout
+	if *linkOnly {
+		warnTo = os.Stderr
+	}
 	for _, w := range res.Warnings {
-		fmt.Println("warning:", w)
+		fmt.Fprintln(warnTo, "warning:", w)
 	}
 	if err != nil {
 		return err
+	}
+	if *linkOnly {
+		fmt.Println(res.ConnectURL)
+		return nil
 	}
 	fmt.Println("mudod installed and running. Add this server in MuDo (open on the Mac):")
 	fmt.Println(res.ConnectURL)

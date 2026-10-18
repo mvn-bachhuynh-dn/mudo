@@ -1,6 +1,6 @@
 # MuDo
 
-MuDo is a small always-on-top macOS widget that shows the Claude Code and Kiro CLI sessions running on your remote Linux servers, so you never forget an agent that finished while you were doing something else. Each session is `idle`, `running`, `waiting` (for a permission prompt) or `done`. A session that finished and is left unseen for a few minutes blinks until you act on it. Clicking a session brings its code-server tab in Google Chrome to the front.
+MuDo is a small always-on-top macOS widget that shows the Claude Code and Kiro CLI sessions running on your remote Linux servers and on the Mac itself, so you never forget an agent that finished while you were doing something else. Each session is `idle`, `running`, `waiting` (for a permission prompt) or `done`. A session that finished and is left unseen for a few minutes blinks until you act on it. Clicking a session brings the place it runs in to the front: its code-server tab in Google Chrome, a local terminal tab or editor window, or the local terminal tab running `ssh` to that server (see [Click targets](#click-targets)).
 
 ```
 Linux server (each one)                                   Mac
@@ -18,9 +18,11 @@ Linux server (each one)                                   Mac
                                                   └─────────────────────┘
 ```
 
-- `server/`: `mudod`, a single static Go binary (linux/amd64): agent hooks, daemon, installer.
+On the Mac, the same `mudod` runs as a LaunchAgent on `127.0.0.1:7879` when **Monitor this Mac** is on (Settings), and MuDo.app adds it as one more server named `This Mac`.
+
+- `server/`: `mudod`, a single static Go binary (linux/amd64 and darwin/arm64): agent hooks, daemon, installer.
 - `app/`: `MuDo.app`, a SwiftUI macOS app with no third-party dependencies.
-- Design spec: [docs/superpowers/specs/2026-10-14-mudo-design.md](docs/superpowers/specs/2026-10-14-mudo-design.md).
+- Design specs: [docs/superpowers/specs/2026-10-14-mudo-design.md](docs/superpowers/specs/2026-10-14-mudo-design.md), [local Mac and SSH sessions](docs/superpowers/specs/2026-10-17-mudo-local-ssh-design.md).
 
 ## Requirements
 
@@ -35,6 +37,7 @@ Linux server (each one)                                   Mac
 - macOS 26 or later.
 - Xcode 26 (or its command line tools) to build the app.
 - Google Chrome (for focusing code-server tabs).
+- Optional, for local and SSH sessions: iTerm2, Terminal.app, Ghostty 1.3+, or VS Code / Cursor / Windsurf / VSCodium / Kiro IDE; tmux.
 
 **Network**: the Mac must reach the server on TCP 7879, over Tailscale or the LAN. Traffic is plain HTTP with a bearer token; use Tailscale or a trusted LAN.
 
@@ -93,6 +96,14 @@ Check it: `systemctl --user status mudod`, then start `claude` and send a prompt
 
 ## Install: Mac app
 
+The app bundles the darwin `mudod` (for **Monitor this Mac**). The Mac has no Go toolchain, so build that binary first on the Linux side; it lands in `app/Resources/mudod` (gitignored) and `make app` fails with a clear message without it:
+
+```bash
+make -C server app-resource      # Linux: dist/mudod-darwin-arm64 -> app/Resources/mudod
+```
+
+Then on the Mac (or from Linux with `app/scripts/on-mac`, which syncs `app/` including `Resources/mudod`):
+
 ```bash
 cd app
 make test                        # unit tests
@@ -109,6 +120,27 @@ Then:
    - Keychain access for `dev.steve.MuDo` (the server token): click **Always Allow**.
    - Automation of Google Chrome, on the first click on a session: click **Allow**.
 3. Optional: Settings → **Launch at login**.
+4. Optional: Settings → This Mac → **Monitor this Mac**, to also show agents running on the Mac (see below).
+
+### Monitor this Mac
+
+Turning the toggle on runs the bundled `MuDo.app/Contents/Resources/mudod install --link-only` and adds the server `This Mac` (`http://127.0.0.1:7879`). That install:
+
+- copies the binary to `~/.local/bin/mudod` (hooks keep a stable path when MuDo.app moves)
+- writes `~/.config/mudo/config.toml` with `api_addr = "127.0.0.1:7879"` (an existing config is kept; a non-loopback `api_addr` gives a warning)
+- writes `~/Library/LaunchAgents/dev.mudo.mudod.plist` and starts it with `launchctl` (log: `~/Library/Logs/mudod.log`)
+- merges the Claude Code and Kiro hooks, as on a server
+
+Turning it off runs `mudod uninstall` (LaunchAgent and hooks removed) and removes `This Mac` only if that succeeds; errors are shown under the toggle with the command output. When MuDo.app is updated, it re-installs `~/.local/bin/mudod` on launch if the bundled binary differs.
+
+### Permissions
+
+Clicks on local and SSH sessions use AppleScript. macOS asks once per app:
+
+- Automation: Google Chrome (code-server tabs), iTerm2, Terminal, Ghostty, System Events (editor windows).
+- Accessibility (System Settings → Privacy & Security → Accessibility): needed to raise the right VS Code / Cursor / Windsurf / VSCodium / Kiro window. Without it the editor is only activated.
+
+A denied permission is logged and the click falls back to activating the app.
 
 ## Usage
 
@@ -122,9 +154,30 @@ Then:
 **A session row**: state icon, project (folder name), agent (`claude`/`kiro`), time in the current state (or `idle`), server name when several servers are configured, `?` when its server is offline (data may be outdated), ⏸ on a blinking row (snooze), and the last prompt on the second line.
 
 - Order: waiting, blinking, done, running, idle.
-- **Click a row**: marks a `done` session as seen (back to `idle`) and focuses its code-server tab in Chrome. Tab matching, first hit wins: the tab whose `?folder=` is the session folder, then the tab of the closest parent folder, then a tab whose title contains the project name. With no match MuDo opens a new Chrome window on `<code-server>/?folder=<cwd>`. Without a code-server URL for that server, it opens Settings.
+- **Click a row**: marks a `done` session as seen (back to `idle`) and focuses where it runs (see [Click targets](#click-targets)). For code-server sessions, tab matching, first hit wins: the tab whose `?folder=` is the session folder, then the tab of the closest parent folder, then a tab whose title contains the project name. With no match MuDo opens a new Chrome window on `<code-server>/?folder=<cwd>`. Without a code-server URL for that server, it opens Settings.
 - **Hover a blinking row**: counts as seen and snoozes it for "Snooze for N min" (default 10); ⏸ does the same.
 - Below the rows, a line per server that is `offline`, `connecting…` or `token invalid`.
+
+### Click targets
+
+| Session runs in | Click focuses |
+|---|---|
+| code-server terminal on a server | the code-server tab in Chrome (unchanged) |
+| local iTerm2 / Terminal.app | the exact tab/session (by TTY) |
+| local Ghostty 1.3+ | the exact terminal (by TTY on 1.4+, else by a unique working-directory match) |
+| local VS Code / Cursor / Windsurf / VSCodium / Kiro IDE integrated terminal | the window of that project |
+| local tmux (in any of the above) | the tmux window and pane, then the terminal of a client attached to that tmux session |
+| `ssh` from a local terminal tab (with or without tmux on the server) | that terminal tab |
+| VS Code / Cursor Remote-SSH terminal | the local editor window of that project |
+
+When the exact target cannot be found, the click activates the owning app; it never opens a new terminal window or tab. Warp, Alacritty, kitty and WezTerm are only activated.
+
+**SSH sessions.** The hook on the server records `SSH_CONNECTION`; the app matches it against the Mac's established `ssh` connections (`lsof`), first by both ports, then by a single connection to that server address and port. This works over the LAN and Tailscale alike, as long as the server sees the Mac's own connection (no jump host rewriting it). Inside tmux on the server, the address of the most recently active tmux client is used. Not supported, with activation of the frontmost terminal app as fallback:
+
+- SSH ControlMaster (multiplexed) connections: every session shares one connection, so the tab cannot be told apart.
+- mosh: no TCP connection to match.
+
+When exactly one plain `ssh` to that server is open, a click may land on that tab even if the session runs elsewhere. The tmux pane on a *remote* server is not selected.
 
 **Menu bar item**: Settings…, Pause blinking (1 h) / Resume blinking, Allow MuDo to control Chrome… (shown only after Automation was denied), Quit MuDo.
 
@@ -155,12 +208,27 @@ No open Chrome tab matched (no code-server tab for that folder or a parent folde
 
 To test focus without clicking (e.g. over SSH): `open 'mudo://focus?project=<name>'` (or `?session=<id>`).
 
+**Clicking a local tmux session only activates the terminal.**
+MuDo did not find `tmux`. It only runs `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, `~/.local/bin/tmux` or `/usr/bin/tmux` (the path the hook recorded goes first when it is one of these). Install tmux in one of those places (or link it there). A tmux socket not owned by your user is not used. Also check that a client is attached to the session; a detached session has no terminal to focus.
+
+**Ghostty: the wrong terminal, or only activation.**
+Ghostty before 1.4 exposes no TTY to AppleScript, so MuDo matches by working directory and focuses only when exactly one terminal has the session's folder. Open the session in its own folder, or update Ghostty to 1.4+.
+
+**A VS Code sidebar Claude session is missing.**
+The Claude Code extension's sidebar panel sends no hooks. Run `claude` in the editor's integrated terminal instead.
+
+**Clicking an SSH session only activates the terminal.**
+The connection could not be matched: ControlMaster, mosh, a jump host, or a session started before the hook recorded terminal info (send one prompt to refresh it). See what the focuser did with the `log show` command above (category `focus`).
+
+**"Monitor this Mac" fails.**
+The error under the toggle shows the `mudod` output. Daemon log: `~/Library/Logs/mudod.log`; service: `launchctl print gui/$(id -u)/dev.mudo.mudod`. A missing bundled binary means the app was built without `make -C server app-resource`.
+
 **Keychain or Chrome prompts after every rebuild.**
 The app is signed ad-hoc. Run `app/scripts/make-signing-identity` once, rebuild, and allow once more.
 
 **Server-side logs.**
 
-- Daemon: `journalctl --user -u mudod -f`
+- Daemon: `journalctl --user -u mudod -f` (on the Mac: `~/Library/Logs/mudod.log`)
 - Hook errors: `~/.local/state/mudo/hook.log`
 - Raw hook payloads: set `MUDO_HOOK_DUMP=1` in the agent's environment; they are appended to `hook.log`.
 
@@ -170,11 +238,23 @@ The app is signed ad-hoc. Run `app/scripts/make-signing-identity` once, rebuild,
 server/   Go module for mudod (cmd/mudod, internal/...)
 app/      Swift package: MuDoCore (logic, unit-tested) and MuDo (app)
 docs/     design spec and implementation plans
+.claude/workflows/  reusable Claude Code workflows (see below)
 ```
 
+### Claude Code workflows
+
+The repo ships [Claude Code workflows](https://code.claude.com/docs/en/workflows.md) that orchestrate subagents for the usual steps. Run them as slash commands in Claude Code:
+
+| Command | When | What it does |
+|---|---|---|
+| `/mudo-spec-review docs/superpowers/specs/<file>.md` | after writing a spec, before the plan | 4 reviewers (platform feasibility, codebase fit, edge cases, security), each checked by a skeptic |
+| `/mudo-task` with `{ plan, task }` | executing a plan, one task at a time | implement with TDD and commit, review spec + quality, up to 3 fix rounds |
+| `/mudo-review [base]` | before merging or pushing (default base `origin/main`) | review Go, Swift, tests and public-repo safety, each finding verified by a skeptic |
+
 ```bash
-cd server && make test build     # go test -race, then dist/mudod-linux-amd64
-cd app && make test app          # swift test, then build/MuDo.app
+cd server && make test build     # go test -race + darwin build/vet, then dist/mudod-{linux-amd64,darwin-arm64}
+make -C server app-resource      # copy the darwin binary to app/Resources/mudod
+cd app && make test app          # swift test, then build/MuDo.app (bundles Resources/mudod)
 ```
 
 Build the Mac app from the Linux server: `app/scripts/on-mac` rsyncs `app/` to the Mac and runs a command there.
@@ -193,5 +273,6 @@ More detail: [server/README.md](server/README.md), [app/README.md](app/README.md
 
 ### Uninstall
 
+- Mac: turn off Settings → **Monitor this Mac** first (removes the LaunchAgent and hooks).
 - Server: `~/.local/bin/mudod uninstall` removes the systemd unit and MuDo's hooks (config, state and binary are kept; delete `~/.config/mudo`, `~/.local/state/mudo` and `~/.local/bin/mudod` to remove everything).
 - Mac: quit MuDo and delete `/Applications/MuDo.app`.

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"mudo/internal/model"
 	"mudo/internal/proc"
 )
 
@@ -28,6 +29,11 @@ type Options struct {
 	PPID      int
 	Cwd       string // used when the payload has no cwd
 	Client    *http.Client
+	Env       func(string) string // nil: no terminal capture
+	Terminal  TerminalDeps
+	// CwdOnStartOnly reads the agent's cwd only on session_start (darwin,
+	// where it costs an lsof); the daemon's sweep corrects drift later.
+	CwdOnStartOnly bool
 }
 
 // Run handles one hook invocation. It never fails and never writes to
@@ -59,13 +65,16 @@ func Run(o Options) {
 	ev.PID, ev.PIDStart, found = o.Proc.FindAgent(o.PPID, o.Agent)
 	// The payload cwd drifts with the agent's `cd`; the agent process's own
 	// cwd is its launch directory. Trust it only for an agent found by name.
-	if found {
+	if found && (!o.CwdOnStartOnly || ev.Kind == model.EvSessionStart) {
 		if cwd, err := o.Proc.Cwd(ev.PID); err == nil && cwd != "" {
 			ev.Cwd, ev.CwdFromProc = cwd, true
 		}
 	}
 	if ev.Cwd == "" {
 		ev.Cwd = o.Cwd
+	}
+	if o.Env != nil {
+		ev.Terminal = CaptureTerminal(o.Env, o.Terminal, ev.PID)
 	}
 	if ev.SessionID == "" {
 		ev.SessionID = fmt.Sprintf("%s-%d", o.Agent, ev.PID)

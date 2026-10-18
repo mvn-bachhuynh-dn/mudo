@@ -1,0 +1,79 @@
+package hook
+
+import (
+	"strconv"
+	"strings"
+
+	"mudo/internal/model"
+)
+
+// TerminalDeps are the side effects of CaptureTerminal, injected for tests.
+type TerminalDeps struct {
+	GOOS     string
+	TTY      func(pid int) string // `ps -o tty=` for pid, e.g. ttys004 or ??
+	LookPath func(string) (string, error)
+	// TmuxClientSSH returns SSH_CONNECTION of the most recently active
+	// client attached to pane's session, or "" (Linux).
+	TmuxClientSSH func(bin, socket, pane string) string
+}
+
+// CaptureTerminal describes the terminal the agent runs in from the hook's
+// environment. It returns nil when nothing is known.
+func CaptureTerminal(env func(string) string, d TerminalDeps, agentPID int) *model.Terminal {
+	t := model.Terminal{
+		Program:    env("TERM_PROGRAM"),
+		CodeServer: env("VSCODE_PROXY_URI") != "",
+		TmuxPane:   env("TMUX_PANE"),
+	}
+	if id := env("ITERM_SESSION_ID"); id != "" {
+		t.ITermSession = id[strings.LastIndex(id, ":")+1:]
+	}
+	tmux := env("TMUX")
+	if tmux != "" {
+		t.TmuxSocket, _, _ = strings.Cut(tmux, ",")
+	}
+	if d.GOOS == "darwin" {
+		if d.TTY != nil && agentPID > 0 {
+			if tty := strings.TrimSpace(d.TTY(agentPID)); tty != "" && tty != "??" {
+				t.TTY = "/dev/" + tty
+			}
+		}
+		if tmux != "" && d.LookPath != nil {
+			t.TmuxBin, _ = d.LookPath("tmux")
+		}
+	}
+	conn := env("SSH_CONNECTION")
+	// Inside tmux on a server, SSH_CONNECTION is the one from when the tmux
+	// server started; ask tmux which client is attached now.
+	if tmux != "" && d.GOOS == "linux" {
+		conn = ""
+		if d.LookPath != nil && d.TmuxClientSSH != nil {
+			if bin, err := d.LookPath("tmux"); err == nil {
+				conn = d.TmuxClientSSH(bin, t.TmuxSocket, t.TmuxPane)
+			}
+		}
+	}
+	if cip, cport, sip, sport, ok := parseSSHConnection(conn); ok {
+		t.SSHClientIP, t.SSHClientPort, t.SSHServerIP, t.SSHServerPort = cip, cport, sip, sport
+	}
+	if t == (model.Terminal{}) {
+		return nil
+	}
+	return &t
+}
+
+// parseSSHConnection splits SSH_CONNECTION: "clientIP clientPort serverIP serverPort".
+func parseSSHConnection(s string) (clientIP string, clientPort int, serverIP string, serverPort int, ok bool) {
+	f := strings.Fields(s)
+	if len(f) != 4 {
+		return "", 0, "", 0, false
+	}
+	cport, err1 := strconv.Atoi(f[1])
+	sport, err2 := strconv.Atoi(f[3])
+	if err1 != nil || err2 != nil || !validPort(cport) || !validPort(sport) {
+		return "", 0, "", 0, false
+	}
+	return f[0], cport, f[2], sport, true
+}
+
+func validPort(p int) bool { return p >= 1 && p <= 65535 }

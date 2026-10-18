@@ -17,6 +17,8 @@ type fakeExec struct {
 	calls     []string
 	tailscale error
 	v6        string
+	// bootstrapFails makes the first n `launchctl bootstrap` calls fail.
+	bootstrapFails int
 }
 
 func (f *fakeExec) run(name string, args ...string) (string, error) {
@@ -35,6 +37,11 @@ func (f *fakeExec) run(name string, args ...string) (string, error) {
 		return "100.64.0.5\n", nil
 	case "loginctl":
 		return "Linger=no\n", nil
+	case "launchctl":
+		if args[0] == "bootstrap" && f.bootstrapFails > 0 {
+			f.bootstrapFails--
+			return "Bootstrap failed: 5: Input/output error\n", errors.New("exit status 5")
+		}
 	}
 	return "", nil
 }
@@ -46,7 +53,7 @@ func options(t *testing.T, ex *fakeExec) Options {
 		t.Fatal(err)
 	}
 	return Options{Home: t.TempDir(), Self: self, Hostname: "devbox", User: "steve",
-		Now: func() time.Time { return t0 }, Exec: ex.run}
+		Now: func() time.Time { return t0 }, Exec: ex.run, GOOS: "linux"}
 }
 
 func TestRunInstallsEverything(t *testing.T) {

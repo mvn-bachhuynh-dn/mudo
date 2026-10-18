@@ -6,12 +6,37 @@ public struct ServerConfig: Codable, Equatable, Identifiable, Sendable {
     public var name: String
     public var daemonURL: URL
     public var codeServerURL: URL?
+    /// Added by Settings → Monitor this Mac: the server whose bundled mudod the app installs,
+    /// upgrades and uninstalls. A loopback server added by hand is local but not managed.
+    public var managedLocal: Bool
 
-    public init(id: UUID, name: String, daemonURL: URL, codeServerURL: URL?) {
+    public init(id: UUID, name: String, daemonURL: URL, codeServerURL: URL?, managedLocal: Bool = false) {
         self.id = id
         self.name = name
         self.daemonURL = daemonURL
         self.codeServerURL = codeServerURL
+        self.managedLocal = managedLocal
+    }
+
+    /// Configs saved before `managedLocal` existed decode with it false.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        daemonURL = try c.decode(URL.self, forKey: .daemonURL)
+        codeServerURL = try c.decodeIfPresent(URL.self, forKey: .codeServerURL)
+        managedLocal = try c.decodeIfPresent(Bool.self, forKey: .managedLocal) ?? false
+    }
+}
+
+extension ServerConfig {
+    /// The mudod on this Mac: the daemon URL host is a loopback name (spec 5.1).
+    public var isLocal: Bool {
+        guard var host = URLComponents(url: daemonURL, resolvingAgainstBaseURL: false)?.host?.lowercased() else {
+            return false
+        }
+        if host.hasPrefix("["), host.hasSuffix("]") { host = String(host.dropFirst().dropLast()) }
+        return ["127.0.0.1", "::1", "localhost"].contains(host)
     }
 }
 

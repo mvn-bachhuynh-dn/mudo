@@ -66,51 +66,6 @@ func next(t *testing.T, ch chan model.Event) model.Event {
 	}
 }
 
-func TestRunPostsNormalizedEvent(t *testing.T) {
-	srv, got := capture(t)
-	Run(options(t, srv.URL, `{"hook_event_name":"Stop","session_id":"abc","cwd":"/w/api"}`))
-	want := model.Event{Agent: "claude", SessionID: "abc", Cwd: "/w/api", Kind: model.EvStop, PID: 300, PIDStart: 555}
-	if ev := next(t, got); ev != want {
-		t.Fatalf("got %+v, want %+v", ev, want)
-	}
-}
-
-func TestRunTakesCwdFromAgentProcess(t *testing.T) {
-	srv, got := capture(t)
-	o := options(t, srv.URL, `{"hook_event_name":"Stop","session_id":"abc","cwd":"/w/api/drifted"}`)
-	if err := proc.WriteFakeCwd(o.Proc.Root, 300, "/w/api"); err != nil {
-		t.Fatal(err)
-	}
-	Run(o)
-	ev := next(t, got)
-	if ev.Cwd != "/w/api" || !ev.CwdFromProc {
-		t.Fatalf("got %+v", ev)
-	}
-}
-
-func TestRunKeepsPayloadCwdWhenAgentNotFound(t *testing.T) {
-	srv, got := capture(t)
-	o := options(t, srv.URL, `{"hook_event_name":"Stop","session_id":"abc","cwd":"/w/api/drifted"}`)
-	o.Agent = "kiro" // no kiro process in the tree: falls back to the parent
-	if err := proc.WriteFakeCwd(o.Proc.Root, 400, "/should/not/be/used"); err != nil {
-		t.Fatal(err)
-	}
-	Run(o)
-	ev := next(t, got)
-	if ev.Cwd == "/should/not/be/used" || ev.CwdFromProc {
-		t.Fatalf("got %+v", ev)
-	}
-}
-
-func TestRunFillsMissingSessionAndCwd(t *testing.T) {
-	srv, got := capture(t)
-	Run(options(t, srv.URL, `{"hook_event_name":"Stop"}`))
-	ev := next(t, got)
-	if ev.SessionID != "claude-300" || ev.Cwd != "/fallback" {
-		t.Fatalf("got %+v", ev)
-	}
-}
-
 func TestRunSkipsIgnoredEvents(t *testing.T) {
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

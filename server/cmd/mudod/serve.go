@@ -54,7 +54,7 @@ func runServe(args []string) error {
 	}()
 
 	base := func(net.Listener) context.Context { return ctx }
-	ingest := &http.Server{Addr: cfg.IngestAddr, Handler: api.Ingest(st), BaseContext: base}
+	ingest := &http.Server{Addr: cfg.IngestAddr, Handler: api.Ingest(st, cfg.IngestAddr), BaseContext: base}
 	client := &http.Server{Addr: cfg.APIAddr, BaseContext: base, ReadHeaderTimeout: 10 * time.Second, Handler: api.Client(st, api.ClientOptions{
 		Token: cfg.Token, Host: host, Version: version, Started: time.Now(), Now: time.Now,
 		PingEvery: 15 * time.Second, SubBuffer: 64,

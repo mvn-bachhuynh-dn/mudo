@@ -10,6 +10,8 @@ type Paths struct {
 	HookLog        string
 	Bin            string
 	Unit           string
+	LaunchAgent    string
+	LaunchLog      string
 	ClaudeSettings string
 	KiroHooks      string
 }
@@ -22,6 +24,8 @@ func For(home string) Paths {
 		HookLog:        filepath.Join(home, ".local", "state", "mudo", "hook.log"),
 		Bin:            filepath.Join(home, ".local", "bin", "mudod"),
 		Unit:           filepath.Join(home, ".config", "systemd", "user", "mudod.service"),
+		LaunchAgent:    filepath.Join(home, "Library", "LaunchAgents", "dev.mudo.mudod.plist"),
+		LaunchLog:      filepath.Join(home, "Library", "Logs", "mudod.log"),
 		ClaudeSettings: filepath.Join(home, ".claude", "settings.json"),
 		KiroHooks:      filepath.Join(home, ".kiro", "hooks", "mudo.json"),
 	}

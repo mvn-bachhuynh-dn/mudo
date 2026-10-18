@@ -1,11 +1,9 @@
-// Package proc reads the Linux /proc filesystem to find and watch agent processes.
+// Package proc finds and watches agent processes: through /proc on Linux and
+// sysctl/lsof on macOS.
 package proc
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -18,37 +16,6 @@ type Stat struct {
 	State     string
 	PPID      int
 	StartTime uint64
-}
-
-func (f FS) Stat(pid int) (Stat, error) {
-	data, err := os.ReadFile(filepath.Join(f.Root, strconv.Itoa(pid), "stat"))
-	if err != nil {
-		return Stat{}, err
-	}
-	s := string(data)
-	open, end := strings.IndexByte(s, '('), strings.LastIndexByte(s, ')')
-	if open < 0 || end < open {
-		return Stat{}, fmt.Errorf("proc: malformed stat for %d", pid)
-	}
-	// fields[0] is stat field 3; field N is fields[N-3].
-	fields := strings.Fields(s[end+1:])
-	if len(fields) < 20 {
-		return Stat{}, fmt.Errorf("proc: short stat for %d", pid)
-	}
-	ppid, err := strconv.Atoi(fields[1])
-	if err != nil {
-		return Stat{}, fmt.Errorf("proc: ppid for %d: %w", pid, err)
-	}
-	start, err := strconv.ParseUint(fields[19], 10, 64)
-	if err != nil {
-		return Stat{}, fmt.Errorf("proc: starttime for %d: %w", pid, err)
-	}
-	return Stat{Comm: s[open+1 : end], State: fields[0], PPID: ppid, StartTime: start}, nil
-}
-
-// Cwd returns the working directory of pid (the /proc/<pid>/cwd symlink).
-func (f FS) Cwd(pid int) (string, error) {
-	return os.Readlink(filepath.Join(f.Root, strconv.Itoa(pid), "cwd"))
 }
 
 // FindAgent walks up from pid `from` to the agent's own process and reports
@@ -88,17 +55,19 @@ func (f FS) isAgent(pid int, comm, agent string) bool {
 		if comm == "claude" {
 			return true
 		}
-		return comm == "node" && strings.Contains(f.cmdline(pid), "claude")
+		exe, args := f.argv(pid)
+		cmd := strings.Join(args, " ")
+		if comm == "node" && strings.Contains(cmd, "claude") {
+			return true
+		}
+		// The native installer runs a binary named after its version, so
+		// comm is e.g. "2.1.144"; argv0 or the versions path gives it away.
+		if len(args) > 0 && filepath.Base(args[0]) == "claude" {
+			return true
+		}
+		return strings.Contains(exe, "/claude/versions/") || strings.Contains(cmd, "/claude/versions/")
 	case "kiro":
 		return strings.HasPrefix(comm, "kiro")
 	}
 	return false
-}
-
-func (f FS) cmdline(pid int) string {
-	b, err := os.ReadFile(filepath.Join(f.Root, strconv.Itoa(pid), "cmdline"))
-	if err != nil {
-		return ""
-	}
-	return strings.ReplaceAll(string(b), "\x00", " ")
 }
