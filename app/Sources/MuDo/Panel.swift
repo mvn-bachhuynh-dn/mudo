@@ -74,6 +74,13 @@ final class PanelState {
         watchPointer()
     }
 
+    /// A click outside the panel (in another app) collapses it, pinned or not.
+    func clickedOutside() {
+        guard isExpanded, !pointerInside() else { return }
+        pinned = false
+        hovering = false
+    }
+
     /// While expanded, polls the pointer instead of trusting `mouseExited`, which AppKit does not
     /// deliver when the window resizes or moves under the pointer. Collapses a hover expansion once
     /// the pointer has been outside for `collapseDelay`; a pinned panel stays open.
@@ -136,6 +143,11 @@ final class PanelController {
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.place() }
+        }
+        // MuDo is never the active app, so focus loss is not observable; a global monitor
+        // sees clicks delivered to other apps (no Accessibility permission needed for mouse events).
+        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak state] _ in
+            MainActor.assumeIsolated { state?.clickedOutside() }
         }
     }
 
