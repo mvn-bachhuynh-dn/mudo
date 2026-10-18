@@ -2,6 +2,8 @@
 
 MuDo is a small always-on-top macOS widget that shows the Claude Code and Kiro CLI sessions running on your remote Linux servers and on the Mac itself, so you never forget an agent that finished while you were doing something else. Each session is `idle`, `running`, `waiting` (for a permission prompt) or `done`. A session that finished and is left unseen for a few minutes blinks until you act on it. Clicking a session brings the place it runs in to the front: its code-server tab in Google Chrome, a local terminal tab or editor window, or the local terminal tab running `ssh` to that server (see [Click targets](#click-targets)).
 
+<p align="center"><img src="docs/images/session-list.png" width="315" alt="MuDo widget expanded: a done claude session, a running kiro session and a running claude session, each with its project, server and last prompt"></p>
+
 ![MuDo architecture: agents on each Linux server and on the Mac report to mudod through hooks; MuDo.app on the Mac reads one SSE stream per mudod](docs/images/architecture.svg)
 
 On the Mac, the same `mudod` runs as a LaunchAgent on `127.0.0.1:7879` when **Monitor this Mac** is on (Settings), and MuDo.app adds it as one more server named `This Mac`.
@@ -175,6 +177,8 @@ A denied permission is logged and the click falls back to activating the app.
 ## Usage
 
 **The pill** (collapsed widget):
+
+<img src="docs/images/pill.png" width="178" alt="Collapsed pill: 2 running, 1 waiting, 0 done">
 
 - Chips with counts: blue = running, orange = waiting, green = done. A zero count is grey.
 - The pill blinks when a session is done and unseen for longer than "Blink after N min" (default 5).
