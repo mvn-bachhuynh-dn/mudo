@@ -248,6 +248,8 @@ A denied permission is logged and the click falls back to activating the app.
 - **Hover a blinking row**: counts as seen and snoozes it for "Snooze for N min" (default 10); ⏸ does the same.
 - Below the rows, a line per server that is `offline`, `connecting…` or `token invalid`.
 
+**Auto-acknowledge.** A `done` session is marked seen without a click when both hold: its place is the one in front (the active Chrome code-server tab, iTerm2 or Terminal.app tab, tmux pane, `ssh` tab, or VS Code-like editor window of that project), and you are at the Mac (input in the last minute, screen not locked). MuDo checks every 2 s, only while a `done` session is waiting, and never focuses anything. Ghostty and other apps are never auto-acknowledged. Turn it off with "Auto-acknowledge when already in view" in Settings.
+
 ### Click targets
 
 | Session runs in | Click focuses |
@@ -276,7 +278,7 @@ When exactly one plain `ssh` to that server is open, a click may land on that ta
 <img src="docs/images/settings.png" width="481" alt="Settings: Monitor this Mac on; a remote server devbox with daemon and code-server URLs, and This Mac on 127.0.0.1:7879">
 
 - Servers: name, daemon URL, code-server URL, token (stored in the Keychain); Save / Remove; paste a `mudo://add` link to add one. **Test** checks the values in the fields (saved or not): the daemon answers `/v1/health` and accepts the token, and the code-server URL answers HTTP.
-- Alerts: Blink after N min, Snooze for N min.
+- Alerts: Blink after N min, Snooze for N min, Auto-acknowledge when already in view (default on).
 - Hidden sessions: one folder pattern per line, `*` matches anything (including `/`), matched against the full session folder. Defaults: `*/kirocrew-workspace/_bg*`, `/tmp/*`.
 - Launch at login.
 

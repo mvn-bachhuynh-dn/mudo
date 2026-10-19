@@ -18,6 +18,12 @@ final class AppModel {
 
     @ObservationIgnored private let focuser = ChromeTabFocuser()
     @ObservationIgnored private let localFocuser = LocalFocuser()
+    @ObservationIgnored private let probe = InViewProbe()
+    /// Sessions acknowledged because they were in view; dropped once no longer `done`.
+    @ObservationIgnored private var autoAcked: Set<SessionKey> = []
+    @ObservationIgnored private var places = PlaceCache()
+    @ObservationIgnored private var autoAckInFlight = false
+    @ObservationIgnored private var ticks = 0
     @ObservationIgnored private let api = APIClient()
     @ObservationIgnored private var connections: [UUID: ServerConnection] = [:]
     @ObservationIgnored private var tokens: [UUID: String] = [:]
@@ -26,6 +32,7 @@ final class AppModel {
     @ObservationIgnored private var pathSatisfied: Bool?
     private static let linkLog = Logger(subsystem: "dev.steve.MuDo", category: "link")
     private static let streamLog = Logger(subsystem: "dev.steve.MuDo", category: "stream")
+    private static let autoAckLog = Logger(subsystem: "dev.steve.MuDo", category: "autoack")
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -79,14 +86,7 @@ final class AppModel {
     func open(_ row: SessionRow) {
         store.clearSnooze(row.id)
         guard let config = settings.servers.first(where: { $0.id == row.id.serverID }) else { return }
-        if row.session.state == .done {
-            let token = tokens[config.id] ?? ""
-            let key = row.id
-            Task {
-                let ok = await api.ack(daemon: config.daemonURL, token: token, sessionID: key.sessionID)
-                if !ok { store.markAckFailed(key) }
-            }
-        }
+        if row.session.state == .done { ack(row.id, config: config) }
         let plan = FocusPlan.plan(server: config, session: row.session)
         switch plan {
         case let .chrome(codeServer, cwd, project):
@@ -144,6 +144,52 @@ final class AppModel {
         return .unhandled
     }
 
+    private func ack(_ key: SessionKey, config: ServerConfig) {
+        let token = tokens[config.id] ?? ""
+        Task {
+            let ok = await api.ack(daemon: config.daemonURL, token: token, sessionID: key.sessionID)
+            if !ok { store.markAckFailed(key) }
+        }
+    }
+
+    // MARK: - Auto-ack
+
+    /// Every 2 s: acknowledges `done` sessions whose place is in front of a present user.
+    /// With no candidate, nothing is scripted or run.
+    private func autoAckTick() {
+        let rows = store.rows
+        autoAcked = AutoAck.keepDone(autoAcked, rows: rows)
+        places.prune(rows: rows)
+        guard settings.autoAckInView, !autoAckInFlight else { return }
+        let candidates = AutoAck.candidates(rows, alreadyAcked: autoAcked)
+        guard !candidates.isEmpty, probe.userPresent() else { return }
+        autoAckInFlight = true
+        Task { await autoAck(candidates) }
+    }
+
+    private func autoAck(_ rows: [SessionRow]) async {
+        defer { autoAckInFlight = false }
+        let now = Date()
+        for row in rows where places.needsResolve(row.id, now: now) {
+            guard let config = settings.servers.first(where: { $0.id == row.id.serverID }) else { continue }
+            let place = await localFocuser.place(for: FocusPlan.plan(server: config, session: row.session))
+            places.set(place, for: row.id, at: now)
+        }
+        let keys = rows.map(\.id)
+        guard keys.contains(where: { places.place($0) != nil }),
+              let front = await probe.frontView(tmuxSockets: places.tmuxSockets(for: keys)) else { return }
+        for row in rows {
+            guard let place = places.place(row.id), AutoAck.isInView(place, front: front) else { continue }
+            // The probe awaited: skip a session clicked, changed or turned off meanwhile.
+            guard settings.autoAckInView, !autoAcked.contains(row.id), store.session(row.id)?.state == .done,
+                  let config = settings.servers.first(where: { $0.id == row.id.serverID }) else { continue }
+            store.clearSnooze(row.id)
+            ack(row.id, config: config)
+            autoAcked.insert(row.id)
+            Self.autoAckLog.info("auto-ack \(row.session.project, privacy: .public)")
+        }
+    }
+
     private func retryAcks(_ keys: [SessionKey]) {
         for key in keys {
             guard let config = settings.servers.first(where: { $0.id == key.serverID }) else { continue }
@@ -158,11 +204,17 @@ final class AppModel {
 
     private func startTimer() {
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.store.tick() }
+            MainActor.assumeIsolated { self?.timerFired() }
         }
         timer.tolerance = 0.1
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+    }
+
+    private func timerFired() {
+        store.tick()
+        ticks += 1
+        if ticks % 2 == 0 { autoAckTick() }
     }
 
     private func watchWakeAndNetwork() {

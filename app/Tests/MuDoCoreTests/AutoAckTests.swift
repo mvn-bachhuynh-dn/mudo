@@ -67,17 +67,64 @@ import Testing
         #expect(!AutoAck.userPresent(idleSeconds: 1, screenLocked: true))
     }
 
+    static let server = UUID()
+
+    static func row(_ id: String, _ state: SessionState, offline: Bool = false) -> SessionRow {
+        let s = Session(id: id, agent: "claude", host: "devbox", cwd: "/w/\(id)", project: id, state: state,
+                        stateSince: Date(timeIntervalSince1970: 0), lastPrompt: "", terminal: nil)
+        return SessionRow(id: key(id), session: s, serverName: "devbox",
+                          bucket: .done, since: Date(timeIntervalSince1970: 0), elapsed: 0,
+                          blinking: false, offline: offline)
+    }
+
+    static func key(_ id: String) -> SessionKey { SessionKey(serverID: server, sessionID: id) }
+
     @Test func candidatesAreDoneOnlineAndNotYetAcked() {
-        let server = UUID()
-        func row(_ id: String, _ state: SessionState, offline: Bool = false) -> SessionRow {
-            let s = Session(id: id, agent: "claude", host: "devbox", cwd: "/w/\(id)", project: id, state: state,
-                            stateSince: Date(timeIntervalSince1970: 0), lastPrompt: "", terminal: nil)
-            return SessionRow(id: SessionKey(serverID: server, sessionID: id), session: s, serverName: "devbox",
-                              bucket: .done, since: Date(timeIntervalSince1970: 0), elapsed: 0,
-                              blinking: false, offline: offline)
-        }
-        let rows = [row("a", .done), row("b", .running), row("c", .done, offline: true), row("d", .done)]
-        let acked: Set = [SessionKey(serverID: server, sessionID: "d")]
+        let rows = [Self.row("a", .done), Self.row("b", .running), Self.row("c", .done, offline: true), Self.row("d", .done)]
+        let acked: Set = [Self.key("d")]
         #expect(AutoAck.candidates(rows, alreadyAcked: acked).map(\.session.id) == ["a"])
+    }
+
+    @Test func autoAckedKeepsOnlyDoneSessions() {
+        let rows = [Self.row("a", .done), Self.row("b", .idle), Self.row("c", .done, offline: true)]
+        let acked: Set = [Self.key("a"), Self.key("b"), Self.key("c"), Self.key("gone")]
+        #expect(AutoAck.keepDone(acked, rows: rows) == [Self.key("a"), Self.key("c")])
+    }
+
+    @Test func placeCacheResolvesOnceAndRetriesNilAfter30s() {
+        var cache = PlaceCache()
+        let t0 = Date(timeIntervalSince1970: 1000)
+        let a = Self.key("a"), b = Self.key("b")
+        #expect(cache.needsResolve(a, now: t0))
+        cache.set(.tty("/dev/ttys004"), for: a, at: t0)
+        cache.set(nil, for: b, at: t0)
+        #expect(cache.place(a) == .tty("/dev/ttys004"))
+        #expect(cache.place(b) == nil)
+        #expect(!cache.needsResolve(a, now: t0.addingTimeInterval(3600)))
+        #expect(!cache.needsResolve(b, now: t0.addingTimeInterval(29)))
+        #expect(cache.needsResolve(b, now: t0.addingTimeInterval(30)))
+    }
+
+    @Test func placeCacheDropsSessionsNoLongerDone() {
+        var cache = PlaceCache()
+        let t0 = Date(timeIntervalSince1970: 1000)
+        for id in ["a", "b", "c"] { cache.set(.tty("/dev/\(id)"), for: Self.key(id), at: t0) }
+        cache.prune(rows: [Self.row("a", .done), Self.row("b", .running)])
+        #expect(cache.place(Self.key("a")) == .tty("/dev/a"))
+        #expect(cache.needsResolve(Self.key("b"), now: t0))
+        #expect(cache.needsResolve(Self.key("c"), now: t0))
+    }
+
+    @Test func placeCacheTmuxSocketsAreDistinctInOrder() {
+        var cache = PlaceCache()
+        let t0 = Date(timeIntervalSince1970: 1000)
+        let keys = ["a", "b", "c", "d", "e"].map(Self.key)
+        cache.set(.tmux(pane: "%1", socket: "/tmp/tmux-501/x"), for: keys[0], at: t0)
+        cache.set(.tmux(pane: "%2", socket: nil), for: keys[1], at: t0)
+        cache.set(.tmux(pane: "%3", socket: "/tmp/tmux-501/x"), for: keys[2], at: t0)
+        cache.set(.tty("/dev/ttys004"), for: keys[3], at: t0)
+        cache.set(.tmux(pane: "%4", socket: "/tmp/tmux-501/y"), for: Self.key("other"), at: t0)
+        #expect(cache.tmuxSockets(for: keys) == ["/tmp/tmux-501/x", nil])
+        #expect(cache.tmuxSockets(for: [keys[3], keys[4]]).isEmpty)
     }
 }

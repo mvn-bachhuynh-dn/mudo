@@ -72,4 +72,53 @@ public enum AutoAck {
     public static func candidates(_ rows: [SessionRow], alreadyAcked: Set<SessionKey>) -> [SessionRow] {
         rows.filter { $0.session.state == .done && !$0.offline && !alreadyAcked.contains($0.id) }
     }
+
+    /// Auto-acked keys whose session is still `done`, so a later `done` can be auto-acked again.
+    public static func keepDone(_ acked: Set<SessionKey>, rows: [SessionRow]) -> Set<SessionKey> {
+        acked.intersection(rows.lazy.filter { $0.session.state == .done }.map(\.id))
+    }
+}
+
+/// Resolved places by session, a nil place included, so `ps`/`lsof` do not run every tick.
+/// A nil place is retried at most every `nilRetry`.
+public struct PlaceCache: Sendable {
+    public static let nilRetry: TimeInterval = 30
+
+    private struct Entry: Sendable {
+        let place: SessionPlace?
+        let at: Date
+    }
+
+    private var entries: [SessionKey: Entry] = [:]
+
+    public init() {}
+
+    public func needsResolve(_ key: SessionKey, now: Date) -> Bool {
+        guard let entry = entries[key] else { return true }
+        return entry.place == nil && now.timeIntervalSince(entry.at) >= Self.nilRetry
+    }
+
+    public func place(_ key: SessionKey) -> SessionPlace? {
+        entries[key]?.place
+    }
+
+    public mutating func set(_ place: SessionPlace?, for key: SessionKey, at now: Date) {
+        entries[key] = Entry(place: place, at: now)
+    }
+
+    /// Drops sessions that are gone or no longer `done`.
+    public mutating func prune(rows: [SessionRow]) {
+        let done = Set(rows.lazy.filter { $0.session.state == .done }.map(\.id))
+        entries = entries.filter { done.contains($0.key) }
+    }
+
+    /// The distinct sockets (nil = the default one) of the `.tmux` places of `keys`, in order.
+    public func tmuxSockets(for keys: [SessionKey]) -> [String?] {
+        var out: [String?] = []
+        for key in keys {
+            guard case let .tmux(_, socket)? = entries[key]?.place, !out.contains(socket) else { continue }
+            out.append(socket)
+        }
+        return out
+    }
 }

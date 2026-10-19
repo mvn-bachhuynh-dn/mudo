@@ -105,7 +105,7 @@ final class LocalFocuser {
             return await place(pid: proc.pid, table: table, target: target)
         case let .ssh(t, cwd, project):
             guard let table = await processTable(),
-                  let conn = await sshClient(t, table: table, step: { Self.log.info("place: \($0, privacy: .public)") })
+                  let conn = await sshClient(t, table: table, step: { Self.log.debug("place: \($0, privacy: .public)") })
             else { return nil }
             let target = Target(cwd: cwd, project: project, remote: true)
             return await place(pid: conn.pid, table: table, target: target)

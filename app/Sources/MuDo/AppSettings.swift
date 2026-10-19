@@ -13,6 +13,7 @@ final class AppSettings {
         static let snooze = "snoozeMinutes"
         static let ignoredPaths = "ignoredPaths"
         static let allDisplays = "showOnAllDisplays"
+        static let autoAck = "autoAckInView"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -39,6 +40,11 @@ final class AppSettings {
         didSet { defaults.set(showOnAllDisplays, forKey: Key.allDisplays) }
     }
 
+    /// Acknowledge a finished session whose place is already in front of a present user.
+    var autoAckInView: Bool {
+        didSet { defaults.set(autoAckInView, forKey: Key.autoAck) }
+    }
+
     static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
 
     /// Glob patterns for session folders to hide, one per entry.
@@ -56,6 +62,7 @@ final class AppSettings {
         snoozeMinutes = snooze > 0 ? snooze : 10
         ignoredPaths = defaults.stringArray(forKey: Key.ignoredPaths) ?? Self.defaultIgnoredPaths
         showOnAllDisplays = defaults.object(forKey: Key.allDisplays) as? Bool ?? true
+        autoAckInView = defaults.object(forKey: Key.autoAck) as? Bool ?? true
     }
 
     /// The server's token; "" when none is stored; nil when the Keychain read failed.
