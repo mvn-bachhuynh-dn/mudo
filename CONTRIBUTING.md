@@ -24,11 +24,11 @@ UI work without real agents: `mudod fake` serves scripted sessions (see the READ
 
 - Keep each PR to one change, with tests for logic changes (`server/internal/...` in Go, `app/Sources/MuDoCore` in Swift; the `MuDo` target is AppKit glue and is kept thin).
 - CI must pass: Go tests on Linux, Swift tests and an app build on macOS.
-- Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages and the PR title, e.g. `feat(app): …`, `fix(mudod): …`, `docs: …`. Releases and the changelog are generated from them: `feat` bumps the minor version, `fix` the patch version.
+- Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages and the PR title, e.g. `feat(app): …`, `fix(mudod): …`, `docs: …`. Releases and the changelog are generated from them: `feat` bumps the minor version, `fix` the patch version. PRs are squash-merged, so the PR title becomes the commit on `main` and the changelog line.
 - Never commit real IP addresses, hostnames, tokens or emails. Use placeholders such as `100.64.0.10`, `fd7a:115c:a1e0::10`, `code.example.com`, `devbox`.
 
 ## Releases
 
-Maintainers merge the release PR that [release-please](https://github.com/googleapis/release-please) keeps open. Merging it tags `vX.Y.Z`, publishes the GitHub release with the changelog, and CI attaches the `mudod` binaries, `MuDo-macos-arm64.zip` and `checksums.txt`.
+Maintainers merge the release PR (with `--admin`: CI does not run on it) that [release-please](https://github.com/googleapis/release-please) keeps open. Merging it tags `vX.Y.Z`, publishes the GitHub release with the changelog, and CI attaches the `mudod` binaries, `MuDo-macos-arm64.zip` and `checksums.txt`.
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).
