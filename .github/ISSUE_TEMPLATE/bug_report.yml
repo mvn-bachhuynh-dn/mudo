@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: MuDo version
+      description: Shown at the bottom of Settings.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: mudod-version
+    attributes:
+      label: mudod version
+      description: "`~/.local/bin/mudod version` on the server or the Mac."
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.0"
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does the session run?
+      multiple: true
+      options:
+        - code-server on a Linux server
+        - SSH from a Mac terminal
+        - Local terminal on the Mac (iTerm2, Terminal, Ghostty)
+        - VS Code / Cursor / other editor terminal
+        - tmux
+        - Other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevant lines from `journalctl --user -u mudod`, `~/.local/state/mudo/hook.log` or
+        `log show --last 10m --info --predicate 'subsystem == "dev.steve.MuDo"'`.
+        Remove tokens, IP addresses and hostnames first.
+      render: text

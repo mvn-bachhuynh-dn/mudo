@@ -92,6 +92,10 @@ struct SettingsView: View {
             }
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
+            } footer: {
+                Text("MuDo \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .formStyle(.grouped)
