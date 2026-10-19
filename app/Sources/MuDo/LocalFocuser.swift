@@ -83,29 +83,56 @@ final class LocalFocuser {
             fallback(target, step: "ps")
             return
         }
-        let lsof = await Self.runTool("/usr/sbin/lsof", ["-nP", "-a", "-iTCP", "-sTCP:ESTABLISHED", "-F", "pcn"]) ?? ""
-        let conns = LsofSSH.parse(lsof)
-        var commandLines: [Int: String] = [:]
-        for pid in Set(conns.map(\.pid)) {
-            commandLines[pid] = await Self.runTool("/bin/ps", ["-o", "command=", "-p", String(pid)])
-        }
-        let commands = commandLines
-        let discarded: (Int) -> Bool = { pid in
-            SSHPick.discard(pid: pid, table: table, commandLine: commands[pid])
-        }
-        guard let conn = SSHPick.choose(conns: conns, terminal: t, isMux: discarded) else {
-            fallback(target, step: "no ssh match among \(conns.count) connections")
-            return
-        }
+        guard let conn = await sshClient(t, table: table, step: { fallback(target, step: $0) }) else { return }
         Self.log.info("ssh pid=\(conn.pid, privacy: .public) local port=\(conn.localPort, privacy: .public)")
         await focus(pid: conn.pid, table: table, target: target, fromTmux: false)
+    }
+
+    // MARK: - Place (no side effects)
+
+    /// Where the session of `plan` is shown, for auto-ack. Mirrors the focus steps but never selects,
+    /// raises or activates anything.
+    func place(for plan: FocusPlan) async -> SessionPlace? {
+        switch plan {
+        case let .chrome(cs, cwd, project):
+            return .chrome(codeServer: cs, cwd: cwd, project: project)
+        case let .local(t, cwd, project):
+            guard let t else { return nil }
+            if let pane = t.tmuxPane { return .tmux(pane: pane, socket: t.tmuxSocket) }
+            guard let tty = t.tty, let table = await processTable(),
+                  let proc = Self.firstNonTmux(onTTY: tty, table: table) else { return nil }
+            let target = Target(tmuxBin: t.tmuxBin, program: t.program, cwd: cwd, project: project, remote: false)
+            return await place(pid: proc.pid, table: table, target: target)
+        case let .ssh(t, cwd, project):
+            guard let table = await processTable(),
+                  let conn = await sshClient(t, table: table, step: { Self.log.info("place: \($0, privacy: .public)") })
+            else { return nil }
+            let target = Target(cwd: cwd, project: project, remote: true)
+            return await place(pid: conn.pid, table: table, target: target)
+        case .none:
+            return nil
+        }
+    }
+
+    private func place(pid: Int, table: ProcessTable, target: Target) async -> SessionPlace? {
+        switch table.owner(of: pid) {
+        case .tmux?:
+            guard let tty = table.process(pid)?.tty, let hit = await tmuxPane(onTTY: tty, target: target) else { return nil }
+            return .tmux(pane: hit.pane, socket: hit.socket)
+        case let .app(app)?:
+            let titles = AutoAck.editorTitles(cwd: target.cwd, project: target.project, home: NSHomeDirectory(),
+                                              remote: target.remote)
+            return AutoAck.place(app: app, outerTTY: table.outerTTY(of: pid), editorTitles: titles)
+        case nil:
+            return nil
+        }
     }
 
     // MARK: - Steps
 
     /// Spec 5.4 step 2 from a tty: a process on it, skipping tmux clients so the walk finds the terminal.
     private func focus(tty: String, table: ProcessTable, target: Target, fromTmux: Bool) async {
-        guard let proc = table.processes(onTTY: tty).first(where: { ($0.comm as NSString).lastPathComponent != "tmux" }) else {
+        guard let proc = Self.firstNonTmux(onTTY: tty, table: table) else {
             fallback(target, step: "no process on \(tty)")
             return
         }
@@ -120,9 +147,7 @@ final class LocalFocuser {
                 fallback(target, step: "nested tmux")
                 return
             }
-            guard let bin = tmuxBinary(target),
-                  let panes = await Self.runTool(bin, ["list-panes", "-a", "-F", "#{pane_tty} #{pane_id} #{socket_path}"]),
-                  let hit = TmuxPick.pane(listPanes: panes, tty: tty) else {
+            guard let hit = await tmuxPane(onTTY: tty, target: target) else {
                 fallback(target, step: "tmux pane for \(tty)")
                 return
             }
@@ -278,6 +303,38 @@ final class LocalFocuser {
         return ProcessTable(psOutput: out)
     }
 
+    /// A process on `tty` that is not a tmux client, so the walk up finds the terminal.
+    private static func firstNonTmux(onTTY tty: String, table: ProcessTable) -> ProcInfo? {
+        table.processes(onTTY: tty).first { ($0.comm as NSString).lastPathComponent != "tmux" }
+    }
+
+    /// Spec 5.5: the local ssh client behind `t`, from lsof; `step` gets the reason when none matches.
+    private func sshClient(_ t: TerminalInfo, table: ProcessTable, step: (String) -> Void) async -> SSHConn? {
+        let lsof = await Self.runTool("/usr/sbin/lsof", ["-nP", "-a", "-iTCP", "-sTCP:ESTABLISHED", "-F", "pcn"]) ?? ""
+        let conns = LsofSSH.parse(lsof)
+        var commandLines: [Int: String] = [:]
+        for pid in Set(conns.map(\.pid)) {
+            commandLines[pid] = await Self.runTool("/bin/ps", ["-o", "command=", "-p", String(pid)])
+        }
+        let commands = commandLines
+        let discarded: (Int) -> Bool = { pid in
+            SSHPick.discard(pid: pid, table: table, commandLine: commands[pid])
+        }
+        guard let conn = SSHPick.choose(conns: conns, terminal: t, isMux: discarded) else {
+            step("no ssh match among \(conns.count) connections")
+            return nil
+        }
+        return conn
+    }
+
+    /// The local tmux pane running on `tty` (e.g. an ssh inside local tmux), from `list-panes`.
+    private func tmuxPane(onTTY tty: String, target: Target) async -> (pane: String, socket: String)? {
+        guard let bin = tmuxBinary(target),
+              let panes = await Self.runTool(bin, ["list-panes", "-a", "-F", "#{pane_tty} #{pane_id} #{socket_path}"])
+        else { return nil }
+        return TmuxPick.pane(listPanes: panes, tty: tty)
+    }
+
     /// Only well-known installs run; the recorded path just picks among them.
     private func tmuxBinary(_ target: Target) -> String? {
         TmuxPick.resolveBinary(recorded: target.tmuxBin, exists: { FileManager.default.isExecutableFile(atPath: $0) },
@@ -285,7 +342,7 @@ final class LocalFocuser {
     }
 
     /// The socket path must belong to this user before tmux gets `-S` with it.
-    private static func socketAllowed(_ path: String) -> Bool {
+    static func socketAllowed(_ path: String) -> Bool {
         let owner = (try? FileManager.default.attributesOfItem(atPath: path))?[.ownerAccountID] as? NSNumber
         return TmuxPick.socketAllowed(path: path, owner: owner?.uint32Value, currentUID: getuid())
     }
@@ -355,7 +412,7 @@ final class LocalFocuser {
     }
 
     /// The System Events process name: the running app's name ("Code" for VS Code), else the bundle name.
-    private static func processName(_ bundlePath: String) -> String {
+    static func processName(_ bundlePath: String) -> String {
         if let name = running(bundlePath: bundlePath)?.localizedName { return name }
         let file = (bundlePath as NSString).lastPathComponent
         return file.hasSuffix(".app") ? String(file.dropLast(4)) : file

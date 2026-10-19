@@ -36,6 +36,31 @@ import Testing
         #expect(!AutoAck.isInView(.editor(titles: ["proj"]), front: .chromeTab(url: "x", title: "proj")))
     }
 
+    @Test func chromeFrontNeedsURLAndTitle() {
+        #expect(AutoAck.chromeFront(["https://code.example.com/", "t"]) == .chromeTab(url: "https://code.example.com/", title: "t"))
+        #expect(AutoAck.chromeFront([]) == nil)
+        #expect(AutoAck.chromeFront(["https://code.example.com/"]) == nil)
+    }
+
+    @Test func placeFromTheOwningApp() {
+        let titles = ["api", "proj"]
+        #expect(AutoAck.place(app: .iTerm2, outerTTY: "/dev/ttys004", editorTitles: titles) == .tty("/dev/ttys004"))
+        #expect(AutoAck.place(app: .terminal, outerTTY: "/dev/ttys005", editorTitles: titles) == .tty("/dev/ttys005"))
+        #expect(AutoAck.place(app: .iTerm2, outerTTY: nil, editorTitles: titles) == nil)
+        #expect(AutoAck.place(app: .vscodeLike(bundlePath: "/Applications/Cursor.app"), outerTTY: nil, editorTitles: titles)
+            == .editor(titles: titles))
+        #expect(AutoAck.place(app: .vscodeLike(bundlePath: "/Applications/Cursor.app"), outerTTY: nil, editorTitles: []) == nil)
+        #expect(AutoAck.place(app: .ghostty, outerTTY: "/dev/ttys004", editorTitles: titles) == nil)
+        #expect(AutoAck.place(app: .other(bundlePath: "/Applications/X.app"), outerTTY: "/dev/ttys004", editorTitles: titles) == nil)
+    }
+
+    @Test func editorTitlesUseOnlyTheFirstTwoCandidates() {
+        #expect(AutoAck.editorTitles(cwd: "/Users/user/work/proj/api", project: "proj", home: "/Users/user", remote: false)
+            == ["api", "proj"])
+        #expect(AutoAck.editorTitles(cwd: "/home/user/proj/api", project: "proj", home: "/Users/user", remote: true) == ["proj"])
+        #expect(AutoAck.editorTitles(cwd: "/home/user/proj", project: "", home: "/Users/user", remote: true) == [])
+    }
+
     @Test func presence() {
         #expect(AutoAck.userPresent(idleSeconds: 5, screenLocked: false))
         #expect(!AutoAck.userPresent(idleSeconds: 60, screenLocked: false))

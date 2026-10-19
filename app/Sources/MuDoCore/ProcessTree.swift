@@ -86,7 +86,7 @@ public struct ProcessTable: Sendable {
         return nil
     }
 
-    static func classify(_ bundle: String) -> TerminalApp {
+    public static func classify(_ bundle: String) -> TerminalApp {
         switch (bundle as NSString).lastPathComponent {
         case "iTerm.app": return .iTerm2
         case "Terminal.app": return .terminal

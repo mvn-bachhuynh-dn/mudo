@@ -39,6 +39,31 @@ public enum AutoAck {
         }
     }
 
+    /// `ChromeScripts.activeTab`'s result as strings: {URL, title}, or {} with no window.
+    public static func chromeFront(_ items: [String]) -> FrontView? {
+        items.count == 2 ? .chromeTab(url: items[0], title: items[1]) : nil
+    }
+
+    /// The place for a session whose terminal or editor is `app`; `outerTTY` is the tty that app knows.
+    /// Ghostty and other apps are never auto-acked.
+    public static func place(app: TerminalApp, outerTTY: String?, editorTitles: [String]) -> SessionPlace? {
+        switch app {
+        case .iTerm2, .terminal:
+            return outerTTY.map { .tty($0) }
+        case .vscodeLike:
+            return editorTitles.isEmpty ? nil : .editor(titles: editorTitles)
+        case .ghostty, .other:
+            return nil
+        }
+    }
+
+    /// The first two title candidates (deepest cwd folder, project), so a parent folder never matches.
+    /// A remote cwd says nothing about local window titles: only the project is kept.
+    public static func editorTitles(cwd: String, project: String, home: String, remote: Bool) -> [String] {
+        if remote { return project.isEmpty ? [] : [project] }
+        return Array(FocusHints.titleCandidates(cwd: cwd, project: project, home: home).prefix(2))
+    }
+
     public static func userPresent(idleSeconds: TimeInterval, screenLocked: Bool) -> Bool {
         !screenLocked && idleSeconds < presenceWindow
     }
