@@ -1,0 +1,97 @@
+# Changelog
+
+## [0.2.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.1.0...v0.2.0) (2026-10-19)
+
+
+### Features
+
+* **app:** add a Test button for each server in Settings ([d36659d](https://github.com/mvn-bachhuynh-dn/mudo/commit/d36659d2a3dbcfbc77bf5164ad1cd3a2dc2bce1b))
+* **app:** add AppleScript Chrome tab focuser ([296e103](https://github.com/mvn-bachhuynh-dn/mudo/commit/296e1037456fc16f42bdc85a06bcfe74a7cdf8bb))
+* **app:** add buckets, stale, snooze, pause and pill to SessionStore ([6b59d72](https://github.com/mvn-bachhuynh-dn/mudo/commit/6b59d726b2c752fcee2fc0bfe500e9a49930b91e))
+* **app:** add byte-level SSE parser ([6dc7e78](https://github.com/mvn-bachhuynh-dn/mudo/commit/6dc7e78db5c89a460b18d45bb4c5a0a9590f7fc1))
+* **app:** add Chrome tab matching and AppleScript sources ([e0c9652](https://github.com/mvn-bachhuynh-dn/mudo/commit/e0c96526d874bbaa2aa658c0fe0f81f6b6f9fc5a))
+* **app:** add floating panel, session views and status menu ([87aa23e](https://github.com/mvn-bachhuynh-dn/mudo/commit/87aa23e165a636a1c7d50c31802dcc96d9d492a3))
+* **app:** add MuDo app target, bundle build and settings storage ([0e36e1a](https://github.com/mvn-bachhuynh-dn/mudo/commit/0e36e1a1819a22c726f5ce3ace867652caafcf26))
+* **app:** add reconnecting ServerConnection with injected transport ([f9cf2a9](https://github.com/mvn-bachhuynh-dn/mudo/commit/f9cf2a9ca729ff1123d0d01bf7eb881ce7d921ed))
+* **app:** add server config, mudo:// add link and format helpers ([74186b6](https://github.com/mvn-bachhuynh-dn/mudo/commit/74186b6dd49bb1cf1625669a1ca9580bb13f4eb7))
+* **app:** add SessionStore merging server streams ([9dd7f2b](https://github.com/mvn-bachhuynh-dn/mudo/commit/9dd7f2b3967946450fdbedd63d688be567999add))
+* **app:** add settings window, launch at login and app README ([1339838](https://github.com/mvn-bachhuynh-dn/mudo/commit/1339838f31e91bdea87b212377067e2ad0a912fa))
+* **app:** add SSE transport, ack client and AppModel ([daf32ef](https://github.com/mvn-bachhuynh-dn/mudo/commit/daf32ef0d42b6cb019b64fb751f7dcf122fef146))
+* **app:** add Swift package and mudod wire models ([aa894dd](https://github.com/mvn-bachhuynh-dn/mudo/commit/aa894ddb31ec70cda17ad426d79f99187fae1a67))
+* **app:** bundle mudod and add Monitor this Mac ([9b613e0](https://github.com/mvn-bachhuynh-dn/mudo/commit/9b613e07140e5d9cc8833797e9af6d6f187b6269))
+* **app:** focus local terminals, editors and ssh tabs ([b041e46](https://github.com/mvn-bachhuynh-dn/mudo/commit/b041e465de13d7bd9f2ba1492beb2495e735d16e))
+* **app:** show the MuDo version at the bottom of Settings ([0f80fc8](https://github.com/mvn-bachhuynh-dn/mudo/commit/0f80fc8ca5e37009761f60d6979e35d357400c00))
+* **app:** terminal info, focus plan, process tree and terminal scripts ([fe02ae3](https://github.com/mvn-bachhuynh-dn/mudo/commit/fe02ae325ccd014e149d12b0376c4d5e2e44451e))
+* **app:** Test button for servers in Settings ([a3f6507](https://github.com/mvn-bachhuynh-dn/mudo/commit/a3f6507dec63f1c61260f4aaa9c5ec10874e888c))
+* **mudo-app:** cache tokens and sign with a stable local identity ([d00b8a5](https://github.com/mvn-bachhuynh-dn/mudo/commit/d00b8a5902654ffcdb8bfe96bf0538979ba94b73))
+* **mudo-app:** larger colored pill chips ([e9b2074](https://github.com/mvn-bachhuynh-dn/mudo/commit/e9b2074c319bd2efd4a1731046d04d801bdeb1b5))
+* **mudo-app:** log Chrome tab focus diagnostics ([4eda648](https://github.com/mvn-bachhuynh-dn/mudo/commit/4eda648d8ea7e6a6260a318925a7d18d3300b209))
+* **mudo-app:** mudo://focus link and focus outcome logging ([b574cd2](https://github.com/mvn-bachhuynh-dn/mudo/commit/b574cd21e1659958794ad26d310d288935129e84))
+* **mudod:** build linux/arm64 too, and build in Docker without Go ([01e08b9](https://github.com/mvn-bachhuynh-dn/mudo/commit/01e08b910a3cd26ab979dce32c26a37862f02615))
+* release pipeline and one-line server install ([e23c6a8](https://github.com/mvn-bachhuynh-dn/mudo/commit/e23c6a834832b27bba7114f17c3f6b81c88c263f))
+* **server:** add config file and path layout ([373afe9](https://github.com/mvn-bachhuynh-dn/mudo/commit/373afe9ace72f2ee762ee53a27058a12a67e77fe))
+* **server:** add ingest and token-protected SSE client API ([0cad3f8](https://github.com/mvn-bachhuynh-dn/mudo/commit/0cad3f83984e4b4a0ea8b1f790f277ec7b8b133b))
+* **server:** add install/uninstall for systemd, Claude and Kiro hooks ([8b5cbde](https://github.com/mvn-bachhuynh-dn/mudo/commit/8b5cbde1a697c7a120adaa39ef430c7b03c920c2))
+* **server:** add mudod fake for UI development ([0b20f72](https://github.com/mvn-bachhuynh-dn/mudo/commit/0b20f72e42395354c3ae7c9c34f49009a84e7c27))
+* **server:** add mudod hook and serve commands with end-to-end test ([35bb4cb](https://github.com/mvn-bachhuynh-dn/mudo/commit/35bb4cbbe70c3d914e1c333281f1eed3d26d3bc0))
+* **server:** add session model and state machine ([b90bd82](https://github.com/mvn-bachhuynh-dn/mudo/commit/b90bd823d892b02debc4eaff82976e22b4b6619a))
+* **server:** add session store with SSE fan-out, sweep and persistence ([e40d45b](https://github.com/mvn-bachhuynh-dn/mudo/commit/e40d45bf4c724549a9ccd8ff38591990a2f74868))
+* **server:** darwin process backend, plain listener and lock-free sweep ([7eb13c6](https://github.com/mvn-bachhuynh-dn/mudo/commit/7eb13c65372f8fa39f0ca09916937aede8e44c9c))
+* **server:** find agent PID and check liveness via /proc ([cc351af](https://github.com/mvn-bachhuynh-dn/mudo/commit/cc351afce62f1a24518ac9f99604c206ad3f08a2))
+* **server:** harden ingest and install as a LaunchAgent on macOS ([96f0502](https://github.com/mvn-bachhuynh-dn/mudo/commit/96f05021f1b4bd0faac2dc768dcd2afaf0cc4ec3))
+* **server:** normalize Claude/Kiro hook payloads and post silently ([b1b6161](https://github.com/mvn-bachhuynh-dn/mudo/commit/b1b6161ef70f669cbbb76a2f2a8fc2c25bb36cc4))
+* **server:** record terminal context from hooks ([2323986](https://github.com/mvn-bachhuynh-dn/mudo/commit/2323986e4570f4619bdfff336d9e0b787c6aa3c1))
+
+
+### Bug Fixes
+
+* **app:** collapse panel by polling the pointer; keep dragged pill on screen ([d315b14](https://github.com/mvn-bachhuynh-dn/mudo/commit/d315b144194e8acaac36007ae2fcb2162c4377cc))
+* **app:** collapse the panel on a click in another app ([8badadc](https://github.com/mvn-bachhuynh-dn/mudo/commit/8badadc86f29cbfe5dd943203c673584b4b0fdfa))
+* **app:** decode + as a space in mudo://add links ([a74e9bc](https://github.com/mvn-bachhuynh-dn/mudo/commit/a74e9bc367c76209a69876a7d2a647c72bfa100c))
+* **app:** explicit managed local server; serialize LocalDaemon ([3e5001a](https://github.com/mvn-bachhuynh-dn/mudo/commit/3e5001a287699bd99716f9f3642ba747ba52a316))
+* **app:** give the Settings window a usable size and bring it to front ([72b9b37](https://github.com/mvn-bachhuynh-dn/mudo/commit/72b9b377a98bb1d6e18769cde10c1948ff4ec6b9))
+* **app:** guard CoreGraphics import with canImport for Linux builds ([eaec07c](https://github.com/mvn-bachhuynh-dn/mudo/commit/eaec07c0e3113a8f4c6e6a52c064cdf185ef684f))
+* **app:** keep expanded panel on screen; hovering a blinking row snoozes it ([12808a0](https://github.com/mvn-bachhuynh-dn/mudo/commit/12808a0a1ef800599e33581ac7e2826b15afa52e))
+* **app:** never run a tmux path from the network; pure focus helpers ([7c03bb7](https://github.com/mvn-bachhuynh-dn/mudo/commit/7c03bb771eb0a002b6c7bcea5061a5ead990ee81))
+* **app:** pill not offline while connecting; report skipped SSE messages ([b17c586](https://github.com/mvn-bachhuynh-dn/mudo/commit/b17c586571ff6cf522e911de7d2d478f249bcd37))
+* **app:** settings validation, keychain read errors, stream logging, automation state ([281d2d4](https://github.com/mvn-bachhuynh-dn/mudo/commit/281d2d4a9829ea597ffc769f360cffe9e0c1a68e))
+* **app:** single denial callback and strict tab parsing in Chrome focuser ([1f652c9](https://github.com/mvn-bachhuynh-dn/mudo/commit/1f652c99685695914007b5f1cf824db3c1e8f35d))
+* **app:** surface Keychain write failures via AppSettings.keychainError ([6e008ee](https://github.com/mvn-bachhuynh-dn/mudo/commit/6e008ee9c89eeb3b2bb7b49841662c2054a2720d))
+* fresh terminal on session_start; editing the local server's URL unmanages it ([51d35ad](https://github.com/mvn-bachhuynh-dn/mudo/commit/51d35ad62ff646774f3dca946b0767b933fd1eb9))
+* **mudo-app:** match code-server tabs by ancestor folder and hyphen title separator ([0eaab0f](https://github.com/mvn-bachhuynh-dn/mudo/commit/0eaab0fdb74c4435418fd30d80688b6dd3ff5a74))
+* **mudod:** keep session cwd from session start ([3267e5f](https://github.com/mvn-bachhuynh-dn/mudo/commit/3267e5f550aa7f0b6c7b763a221281fa0b818b61))
+* **mudod:** refresh session cwd from the agent process during liveness checks ([5fd7c1d](https://github.com/mvn-bachhuynh-dn/mudo/commit/5fd7c1d0da028e00fbdeff18277c08681604a8e2))
+* **mudod:** take session cwd from the agent process ([0f91bba](https://github.com/mvn-bachhuynh-dn/mudo/commit/0f91bbacd26ad28320e6245ebcb3ec43dfba361c))
+* **mudod:** usable add link for wildcard api_addr; --code-server flag ([5f8e481](https://github.com/mvn-bachhuynh-dn/mudo/commit/5f8e48116ef3e805bb2a3f689d2788534625de80))
+* **server:** enforce 0600 on rewritten config file ([ad48818](https://github.com/mvn-bachhuynh-dn/mudo/commit/ad48818065b46ac3ae684a5bcef842a3b9117d7c))
+* **server:** keep settings.json mode, symlinks and user hooks safe ([ea1fc27](https://github.com/mvn-bachhuynh-dn/mudo/commit/ea1fc27e9f41901e5743cf98cc41593e536a61cb))
+* **server:** merge a partial terminal into the stored one ([50fc6b4](https://github.com/mvn-bachhuynh-dn/mudo/commit/50fc6b45dda711668d180303ecc84973caf7c6b6))
+* **server:** recover hook panics, quarantine corrupt state, freebind API listener ([d071480](https://github.com/mvn-bachhuynh-dn/mudo/commit/d07148003aed4503aacc8df3e8e78c6d296fde72))
+
+
+### Performance
+
+* **mudo-app:** bulk Chrome tab listing, ignore clicks in flight, hide ignored sessions ([4e1cdfc](https://github.com/mvn-bachhuynh-dn/mudo/commit/4e1cdfcf7c670acbd39f69e0b26bc95e73932aa4))
+
+
+### Documentation
+
+* add a Settings screenshot (placeholder addresses) ([0c28a81](https://github.com/mvn-bachhuynh-dn/mudo/commit/0c28a8138d8b7e8339246df0fb41dea2df750683))
+* add agent steering (CLAUDE.md, Kiro steering) ([8b220a6](https://github.com/mvn-bachhuynh-dn/mudo/commit/8b220a633a549b0c9d978bddc5bddf08fb133cf1))
+* add an AI-agent install prompt, architecture diagram and demo script ([44bb677](https://github.com/mvn-bachhuynh-dn/mudo/commit/44bb6772555d4b80a04bbf0f613d4d2283224f03))
+* add MIT license, contributing guide, security policy and templates ([34e1b9e](https://github.com/mvn-bachhuynh-dn/mudo/commit/34e1b9e1f2d5673ed8a8920c4518a98ddc4c173d))
+* add MuDo Mac app implementation plan (Plan B) ([fd43b03](https://github.com/mvn-bachhuynh-dn/mudo/commit/fd43b03e1e0bb9099aff8c164062aa493f4c3099))
+* add project README with install and usage ([d90f35a](https://github.com/mvn-bachhuynh-dn/mudo/commit/d90f35a3425cbecccee91543beb1bf4c210a54d9))
+* add widget screenshots taken with app/scripts/demo ([f2eaea5](https://github.com/mvn-bachhuynh-dn/mudo/commit/f2eaea55015be7d901412cd816ab42d2baaa8a79))
+* AI install prompt, diagrams and screenshots; fix This+Mac name ([64117f8](https://github.com/mvn-bachhuynh-dn/mudo/commit/64117f83fd09d044c3a7b411b6e2edc26c0599ed))
+* **app:** note Automation re-prompt and code_server link parameter ([8e5e4bf](https://github.com/mvn-bachhuynh-dn/mudo/commit/8e5e4bfdffdeec7ce42484580ab0c99b37a551ca))
+* design for local Mac and SSH session focus ([c4b5659](https://github.com/mvn-bachhuynh-dn/mudo/commit/c4b565925352533b8eade89c67af1bac87fe2f0d))
+* implementation plan for local Mac and SSH focus ([c6595c7](https://github.com/mvn-bachhuynh-dn/mudo/commit/c6595c7bde9e64a82aca02fc349307b690e5f41c))
+* local Mac and SSH focus ([0853084](https://github.com/mvn-bachhuynh-dn/mudo/commit/0853084e58f030c375f63b900ba698c38b6d115b))
+* point Plan B Mac runner at the LAN Mac and full Xcode ([9c7db17](https://github.com/mvn-bachhuynh-dn/mudo/commit/9c7db17ede992bef0c3d9309911864f52c3ec0ac))
+* quick install from releases, badges, release flow ([b950d32](https://github.com/mvn-bachhuynh-dn/mudo/commit/b950d32759616eeb1ed7535638ee7b0660e84af6))
+* record Kiro hook payload and install findings from real run ([063c7cc](https://github.com/mvn-bachhuynh-dn/mudo/commit/063c7cca3f9bb07de56fa1c924f180c2a0896baf))
+* record MuDo app findings from real use ([49c20f9](https://github.com/mvn-bachhuynh-dn/mudo/commit/49c20f9dc7337b9154625846d33379d0a0c78077))
+* revise local/SSH design after spec review ([2835185](https://github.com/mvn-bachhuynh-dn/mudo/commit/28351857493d1f9ea1cf7b804be91d7edcf295fc))
+* **server:** add Makefile and install guide ([a90d2a3](https://github.com/mvn-bachhuynh-dn/mudo/commit/a90d2a377260854f43a80539e369f50168b5fe9f))
+* **server:** document bus error fix and Kiro headless limit ([b4e87ce](https://github.com/mvn-bachhuynh-dn/mudo/commit/b4e87ce8ea1c1fc13fc62ec6899192f53bb8d674))
