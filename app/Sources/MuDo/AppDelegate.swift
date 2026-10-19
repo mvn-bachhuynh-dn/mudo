@@ -8,10 +8,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        NSApp.mainMenu = Self.editMenu()
         let model = AppModel(settings: AppSettings())
         self.model = model
         settingsWindow = SettingsWindowController(model: model)
         model.onNeedsCodeServer = { [weak self] in self?.settingsWindow?.show() }
+    }
+
+    /// An accessory app shows no menu bar, but text fields only get ⌘X/C/V/A/Z
+    /// through key equivalents of the main menu, so install a hidden Edit menu.
+    static func editMenu() -> NSMenu {
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        let item = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
+        item.submenu = edit
+        let main = NSMenu()
+        main.addItem(item)
+        return main
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
