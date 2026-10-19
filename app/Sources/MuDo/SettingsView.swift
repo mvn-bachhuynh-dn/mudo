@@ -79,6 +79,11 @@ struct SettingsView: View {
                     Text("Not a valid mudo://add link").font(.caption).foregroundStyle(.red)
                 }
             }
+            Section("Widget") {
+                Toggle("Show on all displays", isOn: $settings.showOnAllDisplays)
+                Text("One widget per display. Off: a single widget you can move between displays.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Alerts") {
                 Stepper("Blink after \(settings.staleMinutes) min", value: $settings.staleMinutes, in: 1...120)
                 Stepper("Snooze for \(settings.snoozeMinutes) min", value: $settings.snoozeMinutes, in: 1...240)
@@ -102,6 +107,7 @@ struct SettingsView: View {
         .frame(minWidth: 480, idealWidth: 480, minHeight: 460, idealHeight: 560)
         .onChange(of: settings.staleMinutes) { model.applySettings() }
         .onChange(of: settings.snoozeMinutes) { model.applySettings() }
+        .onChange(of: settings.showOnAllDisplays) { model.onPanelLayoutChange?() }
         .onAppear { ignoredText = settings.ignoredPaths.joined(separator: "\n") }
         .onChange(of: ignoredText) { _, text in
             settings.ignoredPaths = text.split(separator: "\n", omittingEmptySubsequences: true)

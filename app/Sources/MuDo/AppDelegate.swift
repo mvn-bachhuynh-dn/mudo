@@ -3,7 +3,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var model: AppModel?
-    private var panel: PanelController?
+    private var panels: PanelsController?
     private var settingsWindow: SettingsWindowController?
     private var statusItem: NSStatusItem?
 
@@ -16,9 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let model else { return }
-        let panel = PanelController(model: model)
-        panel.show()
-        self.panel = panel
+        let panels = PanelsController(model: model)
+        model.onPanelLayoutChange = { [weak panels] in panels?.reload() }
+        panels.show()
+        self.panels = panels
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "MuDo")

@@ -13,6 +13,8 @@ final class AppModel {
     private(set) var automationDenied = false
     /// Called when a clicked session's server has no code-server URL to focus.
     @ObservationIgnored var onNeedsCodeServer: (() -> Void)?
+    /// Called when the widget layout setting (one per display or a single one) changes.
+    @ObservationIgnored var onPanelLayoutChange: (() -> Void)?
 
     @ObservationIgnored private let focuser = ChromeTabFocuser()
     @ObservationIgnored private let localFocuser = LocalFocuser()
