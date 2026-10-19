@@ -20,11 +20,13 @@ public struct TerminalInfo: Codable, Equatable, Sendable {
     public var sshServerPort: Int?
     /// KiroCrew's Slack channel ID, when the agent was spawned from Slack.
     public var slackChannel: String?
+    /// Its Slack workspace ID, when KiroCrew passes it.
+    public var slackTeam: String?
 
     public init(program: String? = nil, codeServer: Bool? = nil, tty: String? = nil,
                 itermSession: String? = nil, tmuxSocket: String? = nil, tmuxPane: String? = nil,
                 tmuxBin: String? = nil, sshClientIp: String? = nil, sshClientPort: Int? = nil,
-                sshServerIp: String? = nil, sshServerPort: Int? = nil, slackChannel: String? = nil) {
+                sshServerIp: String? = nil, sshServerPort: Int? = nil, slackChannel: String? = nil, slackTeam: String? = nil) {
         self.program = program
         self.codeServer = codeServer
         self.tty = tty
@@ -37,6 +39,7 @@ public struct TerminalInfo: Codable, Equatable, Sendable {
         self.sshServerIp = sshServerIp
         self.sshServerPort = sshServerPort
         self.slackChannel = slackChannel
+        self.slackTeam = slackTeam
     }
 
     /// Drops fields that fail spec 5.1's validation.
@@ -52,6 +55,7 @@ public struct TerminalInfo: Codable, Equatable, Sendable {
         t.sshClientPort = keep(sshClientPort, Self.isPort)
         t.sshServerPort = keep(sshServerPort, Self.isPort)
         t.slackChannel = keep(slackChannel, SlackLink.isChannel)
+        t.slackTeam = keep(slackTeam, SlackLink.isTeam)
         return t
     }
 

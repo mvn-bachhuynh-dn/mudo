@@ -69,9 +69,10 @@ import Testing
     }
 
     @Test func decodesSlackChannel() throws {
-        let t = try WireDate.decoder().decode(TerminalInfo.self, from: Data(#"{"slack_channel":"C0123456789"}"#.utf8))
+        let t = try WireDate.decoder().decode(TerminalInfo.self, from: Data(#"{"slack_channel":"C0123456789","slack_team":"T0123456789"}"#.utf8))
         #expect(t.slackChannel == "C0123456789")
         #expect(t.validated().slackChannel == "C0123456789")
+        #expect(t.validated().slackTeam == "T0123456789")
     }
 
     @Test func dropsBadSlackChannel() {

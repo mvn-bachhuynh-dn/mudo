@@ -31,6 +31,9 @@ func CaptureTerminal(env func(string) string, d TerminalDeps, agentPID int) *mod
 	}
 	if ch := env("KIROCREW_CHANNEL_ID"); validSlackChannel(ch) {
 		t.SlackChannel = ch
+		if team := env("KIROCREW_SLACK_TEAM_ID"); validSlackTeam(team) {
+			t.SlackTeam = team
+		}
 	}
 	tmux := env("TMUX")
 	if tmux != "" {
@@ -86,3 +89,8 @@ var slackChannelRE = regexp.MustCompile(`^[CDG][A-Z0-9]{6,20}$`)
 
 // validSlackChannel accepts a Slack channel ID (public, DM or group).
 func validSlackChannel(s string) bool { return slackChannelRE.MatchString(s) }
+
+var slackTeamRE = regexp.MustCompile(`^[TE][A-Z0-9]{6,20}$`)
+
+// validSlackTeam accepts a Slack workspace (T) or Enterprise Grid org (E) ID.
+func validSlackTeam(s string) bool { return slackTeamRE.MatchString(s) }
