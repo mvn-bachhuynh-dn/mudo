@@ -219,7 +219,7 @@ When exactly one plain `ssh` to that server is open, a click may land on that ta
 
 <img src="docs/images/settings.png" width="481" alt="Settings: Monitor this Mac on; a remote server devbox with daemon and code-server URLs, and This Mac on 127.0.0.1:7879">
 
-- Servers: name, daemon URL, code-server URL, token (stored in the Keychain); Save / Remove; paste a `mudo://add` link to add one.
+- Servers: name, daemon URL, code-server URL, token (stored in the Keychain); Save / Remove; paste a `mudo://add` link to add one. **Test** checks the values in the fields (saved or not): the daemon answers `/v1/health` and accepts the token, and the code-server URL answers HTTP.
 - Alerts: Blink after N min, Snooze for N min.
 - Hidden sessions: one folder pattern per line, `*` matches anything (including `/`), matched against the full session folder. Defaults: `*/kirocrew-workspace/_bg*`, `/tmp/*`.
 - Launch at login.
