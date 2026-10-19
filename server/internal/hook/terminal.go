@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,9 @@ func CaptureTerminal(env func(string) string, d TerminalDeps, agentPID int) *mod
 	}
 	if id := env("ITERM_SESSION_ID"); id != "" {
 		t.ITermSession = id[strings.LastIndex(id, ":")+1:]
+	}
+	if ch := env("KIROCREW_CHANNEL_ID"); validSlackChannel(ch) {
+		t.SlackChannel = ch
 	}
 	tmux := env("TMUX")
 	if tmux != "" {
@@ -77,3 +81,8 @@ func parseSSHConnection(s string) (clientIP string, clientPort int, serverIP str
 }
 
 func validPort(p int) bool { return p >= 1 && p <= 65535 }
+
+var slackChannelRE = regexp.MustCompile(`^[CDG][A-Z0-9]{6,20}$`)
+
+// validSlackChannel accepts a Slack channel ID (public, DM or group).
+func validSlackChannel(s string) bool { return slackChannelRE.MatchString(s) }

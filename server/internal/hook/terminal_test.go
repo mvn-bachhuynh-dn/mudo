@@ -76,6 +76,11 @@ func TestCaptureTerminal(t *testing.T) {
 			TerminalDeps{GOOS: "linux", LookPath: func(string) (string, error) { return "", errors.New("not found") },
 				TmuxClientSSH: clientSSH("192.168.1.20 51000 192.168.1.10 22")},
 			&model.Terminal{TmuxSocket: "/tmp/tmux-1000/default", TmuxPane: "%1"}, true},
+		{"slack channel", map[string]string{"KIROCREW_CHANNEL_ID": "C0123456789"},
+			TerminalDeps{GOOS: "linux"},
+			&model.Terminal{SlackChannel: "C0123456789"}, true},
+		{"bad slack channel", map[string]string{"KIROCREW_CHANNEL_ID": "c0123; rm"},
+			TerminalDeps{GOOS: "linux"}, nil, true},
 		{"nothing known", map[string]string{},
 			TerminalDeps{GOOS: "darwin", TTY: tty("??")}, nil, false},
 	}
