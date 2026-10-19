@@ -32,7 +32,7 @@ jobs:
           go-version-file: server/go.mod
           cache-dependency-path: server/go.sum
       - run: make -C server test build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: mudod
           path: server/dist/mudod-*
@@ -53,7 +53,7 @@ jobs:
       - run: make -C app test app SIGN_ID=-
       - name: Zip MuDo.app
         run: ditto -c -k --keepParent app/build/MuDo.app MuDo-macos-arm64.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: app
           path: MuDo-macos-arm64.zip
