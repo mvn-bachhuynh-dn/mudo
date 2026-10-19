@@ -74,3 +74,48 @@ jobs:
         run: |
           sha256sum mudod-* MuDo-macos-arm64.zip > checksums.txt
           gh release upload "$TAG" mudod-* MuDo-macos-arm64.zip checksums.txt --clobber --repo "$GITHUB_REPOSITORY"
+
+  # Updates Casks/mudo.rb in <owner>/homebrew-tap. Needs the HOMEBREW_TAP_TOKEN secret: a
+  # fine-grained token with Contents read/write on that repository only.
+  homebrew:
+    needs: [release-please, publish]
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.release-please.outputs.tag }}
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - if: env.TAP_TOKEN == ''
+        run: echo "::warning::HOMEBREW_TAP_TOKEN is not set; the Homebrew cask was not updated"
+      - if: env.TAP_TOKEN != ''
+        uses: actions/checkout@v7
+        with:
+          path: mudo
+          sparse-checkout: packaging/homebrew
+      - if: env.TAP_TOKEN != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: app
+          path: assets
+      - if: env.TAP_TOKEN != ''
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+      - if: env.TAP_TOKEN != ''
+        name: Update Casks/mudo.rb
+        run: |
+          version="${TAG#v}"
+          sha=$(sha256sum assets/MuDo-macos-arm64.zip | cut -d' ' -f1)
+          mkdir -p tap/Casks
+          sed -e "s/^  version \".*\"/  version \"$version\"/" \
+              -e "s/^  sha256 \".*\"/  sha256 \"$sha\"/" \
+              mudo/packaging/homebrew/mudo.rb > tap/Casks/mudo.rb
+          grep -q "version \"$version\"" tap/Casks/mudo.rb && grep -q "sha256 \"$sha\"" tap/Casks/mudo.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/mudo.rb
+          git diff --cached --quiet && exit 0
+          git commit -m "mudo $version"
+          git push
