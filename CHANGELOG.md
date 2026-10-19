@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.2.0...v0.3.0) (2026-10-19)
+
+
+### Features
+
+* **app:** show the widget on every display ([41f42a9](https://github.com/mvn-bachhuynh-dn/mudo/commit/41f42a9a961442120c6b0b3d6468f25ab7351d74))
+* **app:** show the widget on every display ([6621b55](https://github.com/mvn-bachhuynh-dn/mudo/commit/6621b55770f6db194640a5f878b0f08b5978ffed))
+
+
+### Documentation
+
+* local-first README intro with Homebrew install ([132f210](https://github.com/mvn-bachhuynh-dn/mudo/commit/132f210740ffa3fbe11a396fff8785265321dbcd))
+* plan for one widget per display ([d460de5](https://github.com/mvn-bachhuynh-dn/mudo/commit/d460de5d0209eabe6b077ce384d832ce37edc977))
+
 ## [0.2.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.1.0...v0.2.0) (2026-10-19)
 
 
