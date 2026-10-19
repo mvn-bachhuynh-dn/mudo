@@ -99,6 +99,32 @@ public enum TerminalScripts {
         """
     }
 
+    /// The tty of iTerm2's current session, or "" with no window. Read-only, like the three below.
+    public static let iTermFrontTTY = """
+    tell application "iTerm2"
+        if (count of windows) is 0 then return ""
+        return tty of current session of current window
+    end tell
+    """
+
+    public static let terminalAppFrontTTY = """
+    tell application "Terminal"
+        if (count of windows) is 0 then return ""
+        return tty of selected tab of front window
+    end tell
+    """
+
+    public static func frontWindowTitle(appName: String) -> String {
+        """
+        tell application "System Events"
+            tell process \(q(appName))
+                if (count of windows) is 0 then return ""
+                return (name of front window) as text
+            end tell
+        end tell
+        """
+    }
+
     private static func ghosttyFind(_ test: String) -> String {
         """
         tell application "Ghostty"

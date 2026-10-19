@@ -160,6 +160,18 @@ public struct SessionRow: Identifiable, Equatable, Sendable {
     public let elapsed: TimeInterval
     public let blinking: Bool
     public let offline: Bool
+
+    public init(id: SessionKey, session: Session, serverName: String, bucket: Bucket, since: Date,
+                elapsed: TimeInterval, blinking: Bool, offline: Bool) {
+        self.id = id
+        self.session = session
+        self.serverName = serverName
+        self.bucket = bucket
+        self.since = since
+        self.elapsed = elapsed
+        self.blinking = blinking
+        self.offline = offline
+    }
 }
 
 public struct PillSummary: Equatable, Sendable {
