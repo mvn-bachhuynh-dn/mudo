@@ -169,6 +169,9 @@ struct ServerEditor: View {
     @State private var error: String?
     /// The stored token could not be read; an empty field then means "keep the stored token".
     @State private var tokenUnreadable = false
+    @State private var testing = false
+    /// Result lines of the last Test, and whether the daemon check passed.
+    @State private var testResult: (lines: [String], ok: Bool)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -182,11 +185,19 @@ struct ServerEditor: View {
                     Text(error).font(.caption).foregroundStyle(.red)
                 }
                 Spacer()
+                if testing { ProgressView().controlSize(.small) }
+                Button("Test") { test() }.disabled(testing)
                 Button("Remove", role: .destructive) {
                     model.settings.remove(server.id)
                     model.applySettings()
                 }
                 Button("Save") { save() }
+            }
+            if let testResult {
+                Text(testResult.lines.joined(separator: "\n"))
+                    .font(.caption)
+                    .foregroundStyle(testResult.ok ? .green : .red)
+                    .textSelection(.enabled)
             }
         }
         .padding(.vertical, 4)
@@ -202,6 +213,38 @@ struct ServerEditor: View {
         tokenUnreadable = stored == nil
         token = stored ?? ""
         error = nil
+        testResult = nil
+    }
+
+    /// Checks the values in the fields, saved or not: the daemon's health with the token,
+    /// and that the code-server URL answers.
+    private func test() {
+        guard let daemonURL = AddLink.httpURL(daemon) else {
+            error = "Daemon URL must be http(s)://host:port"
+            return
+        }
+        let codeServerText = codeServer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let codeServerURL = codeServerText.isEmpty ? nil : AddLink.httpURL(codeServerText)
+        if !codeServerText.isEmpty, codeServerURL == nil {
+            error = "code-server URL must be http(s)://host[:port]"
+            return
+        }
+        error = nil
+        testing = true
+        testResult = nil
+        let token = token
+        Task {
+            let api = APIClient()
+            async let d = api.health(daemon: daemonURL, token: token)
+            async let c = api.probe(codeServer: codeServerURL)
+            let (daemonResult, codeResult) = await (d, c)
+            var lines = [ServerCheck.message(daemonResult)]
+            if let line = ServerCheck.message(codeResult) { lines.append(line) }
+            var ok = ServerCheck.isOK(daemonResult)
+            if case .unreachable = codeResult { ok = false }
+            testResult = (lines, ok)
+            testing = false
+        }
     }
 
     private func save() {
