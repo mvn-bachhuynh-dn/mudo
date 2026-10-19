@@ -78,4 +78,39 @@ import Testing
         onlyEscaped(TerminalScripts.raiseWindow(appName: Self.nasty, titleContains: []))
         onlyEscaped(TerminalScripts.raiseWindow(appName: "Code", titleContains: [Self.nasty]))
     }
+
+    /// The in-view probes only read: no script may focus, select or raise anything.
+    func readOnly(_ script: String, app: String) {
+        #expect(script.contains(app), "\(app)")
+        #expect(script.contains("count of windows) is 0 then return"))
+        // "select " with a space: Terminal's read of "selected tab" is allowed, the `select` command is not.
+        for word in ["activate", "select ", "set selected", "set index", "AXRaise", "set frontmost"] {
+            #expect(!script.contains(word), "\(word)")
+        }
+    }
+
+    @Test func frontProbesOnlyRead() {
+        readOnly(ChromeScripts.activeTab, app: #"tell application id "com.google.Chrome""#)
+        #expect(ChromeScripts.activeTab.contains("{URL of active tab of front window, title of active tab of front window}"))
+        readOnly(TerminalScripts.iTermFrontTTY, app: #"tell application id "com.googlecode.iterm2""#)
+        #expect(TerminalScripts.iTermFrontTTY.contains("tty of current session of current window"))
+        readOnly(TerminalScripts.terminalAppFrontTTY, app: #"tell application id "com.apple.Terminal""#)
+        #expect(TerminalScripts.terminalAppFrontTTY.contains("tty of selected tab of front window"))
+        let title = TerminalScripts.frontWindowTitle(appName: "Code")
+        readOnly(title, app: #"tell application "System Events""#)
+        #expect(title.contains(#"tell process "Code""#))
+        #expect(title.contains("(name of front window) as text"))
+        onlyEscaped(TerminalScripts.frontWindowTitle(appName: Self.nasty))
+    }
+
+    /// A probe never launches its app and cannot block the shared script queue for long.
+    @Test func frontProbesGuardRunningAndTimeOut() {
+        for (script, id) in [(ChromeScripts.activeTab, "com.google.Chrome"),
+                             (TerminalScripts.iTermFrontTTY, "com.googlecode.iterm2"),
+                             (TerminalScripts.terminalAppFrontTTY, "com.apple.Terminal")] {
+            #expect(script.hasPrefix("if application id \"\(id)\" is running then"), "\(id)")
+            #expect(script.contains("with timeout of 2 seconds"), "\(id)")
+        }
+        #expect(TerminalScripts.frontWindowTitle(appName: "Code").contains("with timeout of 2 seconds"))
+    }
 }

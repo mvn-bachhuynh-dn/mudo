@@ -87,6 +87,9 @@ struct SettingsView: View {
             Section("Alerts") {
                 Stepper("Blink after \(settings.staleMinutes) min", value: $settings.staleMinutes, in: 1...120)
                 Stepper("Snooze for \(settings.snoozeMinutes) min", value: $settings.snoozeMinutes, in: 1...240)
+                Toggle("Auto-acknowledge when already in view", isOn: $settings.autoAckInView)
+                Text("A finished session you are already looking at is marked seen without a click.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Hidden sessions") {
                 TextEditor(text: $ignoredText)
