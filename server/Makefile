@@ -1,6 +1,6 @@
 # Single source of truth: version.txt at the repo root, bumped by release-please.
 VERSION ?= $(shell cat ../version.txt 2>/dev/null || echo dev)
-GO_IMAGE ?= golang:1.22
+GO_IMAGE ?= golang:1.26
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
 .PHONY: build docker-build app-resource test test-darwin-live vet clean
