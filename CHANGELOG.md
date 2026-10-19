@@ -5,7 +5,6 @@
 
 ### Features
 
-* **app:** show the widget on every display ([41f42a9](https://github.com/mvn-bachhuynh-dn/mudo/commit/41f42a9a961442120c6b0b3d6468f25ab7351d74))
 * **app:** show the widget on every display ([6621b55](https://github.com/mvn-bachhuynh-dn/mudo/commit/6621b55770f6db194640a5f878b0f08b5978ffed))
 
 
