@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.3.0...v0.4.0) (2026-10-19)
+
+
+### Features
+
+* **app:** acknowledge finished sessions already in view ([#19](https://github.com/mvn-bachhuynh-dn/mudo/issues/19)) ([f274611](https://github.com/mvn-bachhuynh-dn/mudo/commit/f27461120b13301f1766d1863a859ffb520df52f))
+
+
+### Documentation
+
+* changelog dedupe and squash-merge note ([#15](https://github.com/mvn-bachhuynh-dn/mudo/issues/15)) ([f5a681e](https://github.com/mvn-bachhuynh-dn/mudo/commit/f5a681e0b620e1dd0f57bd234db37fcbfe3f1de2))
+
 ## [0.3.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.2.0...v0.3.0) (2026-10-19)
 
 
