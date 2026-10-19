@@ -36,6 +36,21 @@ import Testing
                 == CGPoint(x: 5000, y: 5000))
     }
 
+    @Test func perScreenKeepsSavedPointOnThatScreen() {
+        let p = CGPoint(x: 2000, y: 900)
+        #expect(PanelPlacement.topLeft(saved: p, in: side, width: 200) == p)
+    }
+
+    @Test func perScreenMovesPointFromOtherScreenToThisTopRight() {
+        #expect(PanelPlacement.topLeft(saved: CGPoint(x: 100, y: 800), in: side, width: 200)
+                == CGPoint(x: 1440 + 1920 - 200 - 12, y: 1055 - 12))
+    }
+
+    @Test func perScreenNoSavedPointUsesTopRight() {
+        #expect(PanelPlacement.topLeft(saved: nil, in: main, width: 100, margin: 20)
+                == CGPoint(x: 1320, y: 855))
+    }
+
     @Test func clampPullsOffscreenFrameInside() {
         let frame = CGRect(x: 1440, y: 995, width: 160, height: 32)
         #expect(PanelPlacement.clamp(frame, to: main) == CGRect(x: 1280, y: 843, width: 160, height: 32))

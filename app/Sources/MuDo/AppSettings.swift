@@ -12,6 +12,7 @@ final class AppSettings {
         static let stale = "staleMinutes"
         static let snooze = "snoozeMinutes"
         static let ignoredPaths = "ignoredPaths"
+        static let allDisplays = "showOnAllDisplays"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -33,6 +34,11 @@ final class AppSettings {
         didSet { defaults.set(snoozeMinutes, forKey: Key.snooze) }
     }
 
+    /// One widget per display; off: a single widget that can move between displays.
+    var showOnAllDisplays: Bool {
+        didSet { defaults.set(showOnAllDisplays, forKey: Key.allDisplays) }
+    }
+
     static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
 
     /// Glob patterns for session folders to hide, one per entry.
@@ -49,6 +55,7 @@ final class AppSettings {
         let snooze = defaults.integer(forKey: Key.snooze)
         snoozeMinutes = snooze > 0 ? snooze : 10
         ignoredPaths = defaults.stringArray(forKey: Key.ignoredPaths) ?? Self.defaultIgnoredPaths
+        showOnAllDisplays = defaults.object(forKey: Key.allDisplays) as? Bool ?? true
     }
 
     /// The server's token; "" when none is stored; nil when the Keychain read failed.

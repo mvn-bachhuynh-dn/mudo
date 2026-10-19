@@ -29,6 +29,15 @@ public enum PanelPlacement {
         return CGPoint(x: m.maxX - width - margin, y: m.maxY - margin)
     }
 
+    /// Like `topLeft(saved:screens:main:width:margin:)`, for a panel confined to one screen:
+    /// keeps `saved` while a point just inside it is on `screen`; otherwise `screen`'s
+    /// top-right corner, inset by `margin`.
+    public static func topLeft(saved: CGPoint?, in screen: CGRect, width: CGFloat,
+                               margin: CGFloat = 12) -> CGPoint {
+        if let p = saved, contains(screen, CGPoint(x: p.x + 10, y: p.y - 10)) { return p }
+        return CGPoint(x: screen.maxX - width - margin, y: screen.maxY - margin)
+    }
+
     /// Moves (and if needed shrinks) `frame` so it lies fully inside `visible`.
     public static func clamp(_ frame: CGRect, to visible: CGRect) -> CGRect {
         var f = frame

@@ -118,17 +118,24 @@ final class PanelState {
 @MainActor
 final class PanelController {
     private static let positionKey = "panelTopLeft"
+    private static let screenPositionsKey = "panelTopLeftByScreen"
 
     private let panel = FloatingPanel()
     private let state = PanelState()
     private let defaults: UserDefaults
+    /// The display this panel is confined to (`NSScreen.mudoKey`); nil = a single panel free
+    /// to move between displays.
+    private let screenKey: String?
+    private var observers: [NSObjectProtocol] = []
+    private var clickMonitor: Any?
     /// True while we move the panel ourselves, so the move is not saved as the user's choice.
     private var movingProgrammatically = false
     /// Debounces `didMove` so a user drag is handled once, after it ends.
     private var moveSettleTask: Task<Void, Never>?
 
-    init(model: AppModel, defaults: UserDefaults = .standard) {
+    init(model: AppModel, screenKey: String? = nil, defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        self.screenKey = screenKey
         let host = HoverHostingView(rootView: RootView(model: model, panel: state))
         host.sizingOptions = []
         host.onPointerEntered = { [weak state] in state?.pointerEntered() }
@@ -138,15 +145,18 @@ final class PanelController {
             return NSMouseInRect(NSEvent.mouseLocation, panel.frame, false)
         }
         state.onSizeChange = { [weak self] size in self?.resize(to: size) }
-        NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
+        observers.append(NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.panelMoved() }
-        }
-        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.place() }
+        })
+        // A per-display panel is re-placed by PanelsController when screens change.
+        if screenKey == nil {
+            observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.place() }
+            })
         }
         // MuDo is never the active app, so focus loss is not observable; a global monitor
         // sees clicks delivered to other apps (no Accessibility permission needed for mouse events).
-        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak state] _ in
+        clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak state] _ in
             MainActor.assumeIsolated { state?.clickedOutside() }
         }
     }
@@ -154,6 +164,29 @@ final class PanelController {
     func show() {
         place()
         panel.orderFrontRegardless()
+    }
+
+    /// Hides the panel and stops observing; the controller can then be released.
+    func close() {
+        moveSettleTask?.cancel()
+        panel.orderOut(nil)
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        observers = []
+        if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        clickMonitor = nil
+    }
+
+    /// The screen a per-display panel belongs to; nil for a free panel or a display that is gone.
+    private var ownScreen: NSScreen? {
+        guard let screenKey else { return nil }
+        return NSScreen.screens.first { $0.mudoKey == screenKey }
+    }
+
+    /// The visible frame the panel is kept inside: its own display's, or for a free panel
+    /// the display it is on.
+    private var confiningFrame: NSRect? {
+        if screenKey != nil { return ownScreen?.visibleFrame }
+        return (panel.screen ?? NSScreen.main)?.visibleFrame
     }
 
     /// Keeps the top edge, and the edge nearer the screen side (right edge in the right half),
@@ -164,7 +197,7 @@ final class PanelController {
         var frame = old
         frame.size = size
         frame.origin.y = old.maxY - size.height
-        if let visible = (panel.screen ?? NSScreen.main)?.visibleFrame {
+        if let visible = confiningFrame {
             if old.midX > visible.midX {
                 frame.origin.x = old.maxX - size.width
             }
@@ -206,20 +239,39 @@ final class PanelController {
             panelMoved()
             return
         }
-        let frame = Self.onScreen(panel.frame)
+        let frame: NSRect
+        if screenKey != nil {
+            guard let visible = ownScreen?.visibleFrame else { return }
+            frame = PanelPlacement.clamp(panel.frame, to: visible)
+        } else {
+            frame = Self.onScreen(panel.frame)
+        }
         if frame != panel.frame { setFrame(frame) }
         if !state.isExpanded { saveTopLeft() }
     }
 
     private func saveTopLeft() {
-        defaults.set([Double(panel.frame.minX), Double(panel.frame.maxY)], forKey: Self.positionKey)
+        let xy = [Double(panel.frame.minX), Double(panel.frame.maxY)]
+        if let screenKey {
+            var all = defaults.dictionary(forKey: Self.screenPositionsKey) ?? [:]
+            all[screenKey] = xy
+            defaults.set(all, forKey: Self.screenPositionsKey)
+        } else {
+            defaults.set(xy, forKey: Self.positionKey)
+        }
     }
 
-    private func place() {
-        var saved: CGPoint?
-        if let xy = defaults.array(forKey: Self.positionKey) as? [Double], xy.count == 2 {
-            saved = CGPoint(x: xy[0], y: xy[1])
+    private static func point(_ value: Any?) -> CGPoint? {
+        guard let xy = value as? [Double], xy.count == 2 else { return nil }
+        return CGPoint(x: xy[0], y: xy[1])
+    }
+
+    func place() {
+        if screenKey != nil {
+            placeOnOwnScreen()
+            return
         }
+        let saved = Self.point(defaults.array(forKey: Self.positionKey))
         guard let topLeft = PanelPlacement.topLeft(
             saved: saved,
             screens: NSScreen.screens.map(\.visibleFrame),
@@ -231,6 +283,22 @@ final class PanelController {
         setFrame(frame)
         // A saved position that was (partly) off screen is replaced by the corrected one.
         if let saved, saved != CGPoint(x: frame.minX, y: frame.maxY), !state.isExpanded {
+            saveTopLeft()
+        }
+    }
+
+    /// A per-display panel: its saved position on that display, else the legacy single-panel
+    /// position if it is on that display, else the display's top-right corner.
+    private func placeOnOwnScreen() {
+        guard let screenKey, let visible = ownScreen?.visibleFrame else { return }
+        let own = Self.point(defaults.dictionary(forKey: Self.screenPositionsKey)?[screenKey])
+        let saved = own ?? Self.point(defaults.array(forKey: Self.positionKey))
+        let topLeft = PanelPlacement.topLeft(saved: saved, in: visible, width: max(panel.frame.width, 160))
+        let size = panel.frame.size
+        let frame = PanelPlacement.clamp(NSRect(x: topLeft.x, y: topLeft.y - size.height,
+                                                width: size.width, height: size.height), to: visible)
+        setFrame(frame)
+        if let own, own != CGPoint(x: frame.minX, y: frame.maxY), !state.isExpanded {
             saveTopLeft()
         }
     }
