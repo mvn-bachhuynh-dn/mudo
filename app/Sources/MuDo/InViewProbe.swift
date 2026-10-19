@@ -23,7 +23,8 @@ final class InViewProbe {
         case "com.googlecode.iterm2", "com.apple.Terminal":
             let script = id == "com.apple.Terminal" ? TerminalScripts.terminalAppFrontTTY : TerminalScripts.iTermFrontTTY
             guard let tty = await run(script, id: id, parse: { $0.stringValue ?? "" }), !tty.isEmpty else { return nil }
-            return .terminal(tty: tty, tmuxPane: await activePane(clientTTY: tty, sockets: tmuxSockets))
+            let active = await activePane(clientTTY: tty, sockets: tmuxSockets)
+            return .terminal(tty: tty, tmuxPane: active?.pane, tmuxSocket: active?.socket)
         default:
             guard let path = app.bundleURL?.path, case .vscodeLike = ProcessTable.classify(path) else { return nil }
             let script = TerminalScripts.frontWindowTitle(appName: LocalFocuser.processName(path))
@@ -40,8 +41,9 @@ final class InViewProbe {
         return AutoAck.userPresent(idleSeconds: idle, screenLocked: locked)
     }
 
-    /// The active pane of the tmux client attached on `clientTTY`; the first server that answers wins.
-    private func activePane(clientTTY: String, sockets: [String?]) async -> String? {
+    /// The active pane of the tmux client attached on `clientTTY`, with the socket argument of the
+    /// server that answered (only the server owning that client does).
+    private func activePane(clientTTY: String, sockets: [String?]) async -> (pane: String, socket: String?)? {
         guard !sockets.isEmpty,
               let bin = TmuxPick.resolveBinary(recorded: nil, exists: { FileManager.default.isExecutableFile(atPath: $0) },
                                                home: NSHomeDirectory()) else { return nil }
@@ -52,7 +54,7 @@ final class InViewProbe {
                 continue
             }
             let pane = out.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !pane.isEmpty { return pane }
+            if !pane.isEmpty { return (pane, socket) }
         }
         return nil
     }

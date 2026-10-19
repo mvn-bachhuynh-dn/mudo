@@ -3,9 +3,10 @@ import Foundation
 /// What is in front of the user right now.
 public enum FrontView: Equatable, Sendable {
     case chromeTab(url: String, title: String)
-    /// iTerm2's current session or Terminal's selected tab; `tmuxPane` is the active pane
-    /// (e.g. "%3") when that tty is a tmux client, else nil.
-    case terminal(tty: String, tmuxPane: String?)
+    /// iTerm2's current session or Terminal's selected tab. When that tty is a tmux client,
+    /// `tmuxPane` is its active pane (e.g. "%3") and `tmuxSocket` the socket argument of the
+    /// server that answered (nil = the default socket); pane ids are only unique per server.
+    case terminal(tty: String, tmuxPane: String?, tmuxSocket: String?)
     case editor(title: String)
 }
 
@@ -25,17 +26,35 @@ public enum AutoAck {
 
     public static func isInView(_ place: SessionPlace, front: FrontView) -> Bool {
         switch (place, front) {
-        case let (.chrome(codeServer, cwd, project), .chromeTab(url, title)):
-            let tab = ChromeTab(windowID: 0, tabIndex: 1, url: url, title: title)
-            return TabMatcher.match(tabs: [tab], codeServer: codeServer, cwd: cwd, project: project) != nil
-        case let (.tty(a), .terminal(b, _)):
+        case let (.chrome(codeServer, cwd, _), .chromeTab(url, _)):
+            // Only the session's own folder: unlike click focus, no parent folder or title fallback.
+            guard TabMatcher.isUnder(codeServer: codeServer, url), let folder = TabMatcher.folder(of: url) else {
+                return false
+            }
+            return TabMatcher.trimSlash(folder) == TabMatcher.trimSlash(cwd)
+        case let (.tty(a), .terminal(b, _, _)):
             return a == b
-        case let (.tmux(p, _), .terminal(_, q)):
-            return q == p
+        case let (.tmux(p, socket), .terminal(_, q, frontSocket)):
+            return q == p && frontSocket == socket
         case let (.editor(titles), .editor(title)):
-            return titles.contains { !$0.isEmpty && title.contains($0) }
+            let segments = titleSegments(title)
+            return titles.contains { !$0.isEmpty && segments.contains($0) }
         default:
             return false
+        }
+    }
+
+    /// A window title split on the separators editors use ("main.go — proj — Visual Studio Code"),
+    /// so a candidate matches a whole segment, never part of a longer name.
+    static func titleSegments(_ title: String) -> [String] {
+        var parts = [title]
+        for sep in [" \u{2014} ", " \u{2013} ", " - "] {
+            parts = parts.flatMap { $0.components(separatedBy: sep) }
+        }
+        return parts.map {
+            $0.trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\u{25CF}\u{2022}*"))
+                .trimmingCharacters(in: .whitespaces)
         }
     }
 

@@ -102,12 +102,12 @@ public enum ChromeScripts {
     """
 
     /// Returns {URL, title} of the front window's active tab, or {} with no window. Never activates.
-    public static let activeTab = """
-    tell application id "com.google.Chrome"
-        if (count of windows) is 0 then return {}
-        return {URL of active tab of front window, title of active tab of front window}
-    end tell
-    """
+    public static let activeTab = TerminalScripts.probe(appID: "com.google.Chrome", empty: "{}", """
+        tell application id "com.google.Chrome"
+            if (count of windows) is 0 then return {}
+            return {URL of active tab of front window, title of active tab of front window}
+        end tell
+    """)
 
     public static func focus(_ tab: ChromeTab) -> String {
         """

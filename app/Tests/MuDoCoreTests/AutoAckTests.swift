@@ -12,16 +12,31 @@ import Testing
         #expect(!AutoAck.isInView(place, front: .chromeTab(url: "https://example.org/?folder=/home/user/proj", title: "x")))
     }
 
+    @Test func chromeParentFolderOrTitleIsNotInView() {
+        let place = SessionPlace.chrome(codeServer: cs, cwd: "/home/user/proj", project: "proj")
+        #expect(AutoAck.isInView(place, front: .chromeTab(url: "https://code.example.com/?folder=/home/user/proj/", title: "x")))
+        #expect(!AutoAck.isInView(place, front: .chromeTab(url: "https://code.example.com/?folder=/home/user", title: "x")))
+        #expect(!AutoAck.isInView(place, front: .chromeTab(url: "https://code.example.com/", title: "main.go - proj - code-server")))
+    }
+
     @Test func ttyMatchesExactly() {
-        #expect(AutoAck.isInView(.tty("/dev/ttys004"), front: .terminal(tty: "/dev/ttys004", tmuxPane: nil)))
-        #expect(!AutoAck.isInView(.tty("/dev/ttys004"), front: .terminal(tty: "/dev/ttys005", tmuxPane: nil)))
+        #expect(AutoAck.isInView(.tty("/dev/ttys004"), front: .terminal(tty: "/dev/ttys004", tmuxPane: nil, tmuxSocket: nil)))
+        #expect(!AutoAck.isInView(.tty("/dev/ttys004"), front: .terminal(tty: "/dev/ttys005", tmuxPane: nil, tmuxSocket: nil)))
     }
 
     @Test func tmuxNeedsTheActivePane() {
         let place = SessionPlace.tmux(pane: "%3", socket: nil)
-        #expect(AutoAck.isInView(place, front: .terminal(tty: "/dev/ttys001", tmuxPane: "%3")))
-        #expect(!AutoAck.isInView(place, front: .terminal(tty: "/dev/ttys001", tmuxPane: "%4")))
-        #expect(!AutoAck.isInView(place, front: .terminal(tty: "/dev/ttys001", tmuxPane: nil)))
+        #expect(AutoAck.isInView(place, front: .terminal(tty: "/dev/ttys001", tmuxPane: "%3", tmuxSocket: nil)))
+        #expect(!AutoAck.isInView(place, front: .terminal(tty: "/dev/ttys001", tmuxPane: "%4", tmuxSocket: nil)))
+        #expect(!AutoAck.isInView(place, front: .terminal(tty: "/dev/ttys001", tmuxPane: nil, tmuxSocket: nil)))
+    }
+
+    @Test func tmuxPaneOnAnotherServerIsNotInView() {
+        let other = SessionPlace.tmux(pane: "%3", socket: "/tmp/tmux-501/x")
+        #expect(!AutoAck.isInView(other, front: .terminal(tty: "/dev/ttys001", tmuxPane: "%3", tmuxSocket: nil)))
+        #expect(AutoAck.isInView(other, front: .terminal(tty: "/dev/ttys001", tmuxPane: "%3", tmuxSocket: "/tmp/tmux-501/x")))
+        #expect(!AutoAck.isInView(.tmux(pane: "%3", socket: nil),
+                                  front: .terminal(tty: "/dev/ttys001", tmuxPane: "%3", tmuxSocket: "/tmp/tmux-501/x")))
     }
 
     @Test func editorTitleContainsACandidate() {
@@ -29,6 +44,13 @@ import Testing
         #expect(AutoAck.isInView(place, front: .editor(title: "main.go — proj")))
         #expect(!AutoAck.isInView(place, front: .editor(title: "main.go — other")))
         #expect(!AutoAck.isInView(.editor(titles: [""]), front: .editor(title: "anything")))
+    }
+
+    @Test func editorMatchesWholeTitleSegmentsOnly() {
+        #expect(!AutoAck.isInView(.editor(titles: ["api"]), front: .editor(title: "capital.ts — budget")))
+        #expect(!AutoAck.isInView(.editor(titles: ["app"]), front: .editor(title: "main.go — myapp-server — Visual Studio Code")))
+        #expect(AutoAck.isInView(.editor(titles: ["app"]), front: .editor(title: "● main.go - app - Cursor")))
+        #expect(AutoAck.isInView(.editor(titles: ["proj"]), front: .editor(title: "proj")))
     }
 
     @Test func mismatchedKindsAreNotInView() {
