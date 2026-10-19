@@ -91,6 +91,11 @@ struct SettingsView: View {
                 Text("A finished session you are already looking at is marked seen without a click.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Slack") {
+                TextField("Workspace ID", text: $settings.slackTeamID, prompt: Text("T0123456789"))
+                Text("Opens KiroCrew sessions straight in the Slack app. Empty: through slack.com in the browser.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Hidden sessions") {
                 TextEditor(text: $ignoredText)
                     .font(.system(.body, design: .monospaced))

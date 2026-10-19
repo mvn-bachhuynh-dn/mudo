@@ -14,6 +14,7 @@ final class AppSettings {
         static let ignoredPaths = "ignoredPaths"
         static let allDisplays = "showOnAllDisplays"
         static let autoAck = "autoAckInView"
+        static let slackTeam = "slackTeamID"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -45,6 +46,11 @@ final class AppSettings {
         didSet { defaults.set(autoAckInView, forKey: Key.autoAck) }
     }
 
+    /// Slack workspace ID for opening KiroCrew channels in the Slack app; "" opens them through slack.com.
+    var slackTeamID: String {
+        didSet { defaults.set(slackTeamID, forKey: Key.slackTeam) }
+    }
+
     static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
 
     /// Glob patterns for session folders to hide, one per entry.
@@ -63,6 +69,7 @@ final class AppSettings {
         ignoredPaths = defaults.stringArray(forKey: Key.ignoredPaths) ?? Self.defaultIgnoredPaths
         showOnAllDisplays = defaults.object(forKey: Key.allDisplays) as? Bool ?? true
         autoAckInView = defaults.object(forKey: Key.autoAck) as? Bool ?? true
+        slackTeamID = defaults.string(forKey: Key.slackTeam) ?? ""
     }
 
     /// The server's token; "" when none is stored; nil when the Keychain read failed.

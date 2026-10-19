@@ -18,11 +18,13 @@ public struct TerminalInfo: Codable, Equatable, Sendable {
     public var sshClientPort: Int?
     public var sshServerIp: String?
     public var sshServerPort: Int?
+    /// KiroCrew's Slack channel ID, when the agent was spawned from Slack.
+    public var slackChannel: String?
 
     public init(program: String? = nil, codeServer: Bool? = nil, tty: String? = nil,
                 itermSession: String? = nil, tmuxSocket: String? = nil, tmuxPane: String? = nil,
                 tmuxBin: String? = nil, sshClientIp: String? = nil, sshClientPort: Int? = nil,
-                sshServerIp: String? = nil, sshServerPort: Int? = nil) {
+                sshServerIp: String? = nil, sshServerPort: Int? = nil, slackChannel: String? = nil) {
         self.program = program
         self.codeServer = codeServer
         self.tty = tty
@@ -34,6 +36,7 @@ public struct TerminalInfo: Codable, Equatable, Sendable {
         self.sshClientPort = sshClientPort
         self.sshServerIp = sshServerIp
         self.sshServerPort = sshServerPort
+        self.slackChannel = slackChannel
     }
 
     /// Drops fields that fail spec 5.1's validation.
@@ -48,6 +51,7 @@ public struct TerminalInfo: Codable, Equatable, Sendable {
         t.sshServerIp = keep(sshServerIp, Self.isIP)
         t.sshClientPort = keep(sshClientPort, Self.isPort)
         t.sshServerPort = keep(sshServerPort, Self.isPort)
+        t.slackChannel = keep(slackChannel, SlackLink.isChannel)
         return t
     }
 

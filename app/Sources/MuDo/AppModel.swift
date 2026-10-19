@@ -93,6 +93,10 @@ final class AppModel {
             focuser.focus(codeServer: codeServer, cwd: cwd, project: project)
         case .local, .ssh:
             localFocuser.focus(plan)
+        case let .slack(channel):
+            if let url = SlackLink.url(channel: channel, team: settings.slackTeamID) {
+                NSWorkspace.shared.open(url)
+            }
         case .none:
             onNeedsCodeServer?()
         }
