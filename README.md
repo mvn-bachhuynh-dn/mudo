@@ -4,33 +4,29 @@
 [![Release](https://img.shields.io/github/v/release/mvn-bachhuynh-dn/mudo?sort=semver)](https://github.com/mvn-bachhuynh-dn/mudo/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-MuDo is a small always-on-top macOS widget that shows the Claude Code and Kiro CLI sessions running on your remote Linux servers and on the Mac itself, so you never forget an agent that finished while you were doing something else. Each session is `idle`, `running`, `waiting` (for a permission prompt) or `done`. A session that finished and is left unseen for a few minutes blinks until you act on it. Clicking a session brings the place it runs in to the front: its code-server tab in Google Chrome, a local terminal tab or editor window, or the local terminal tab running `ssh` to that server (see [Click targets](#click-targets)).
+**Know which of your Claude Code and Kiro sessions need you.**
+
+MuDo is a small always-on-top widget for macOS. Run a few coding agents in parallel, switch to something else, and MuDo shows each session as `running`, `waiting` (for a permission prompt), `done` or `idle`. A session that finished and is left unseen blinks until you look at it. Click it and MuDo brings its terminal tab, editor window or code-server tab to the front.
 
 <p align="center"><img src="docs/images/session-list.png" width="315" alt="MuDo widget expanded: a done claude session, a running kiro session and a running claude session, each with its project, server and last prompt"></p>
 
-![MuDo architecture: agents on each Linux server and on the Mac report to mudod through hooks; MuDo.app on the Mac reads one SSE stream per mudod](docs/images/architecture.svg)
+- Works on the Mac alone. Agents running on remote Linux servers (over SSH, tmux or code-server) can be added later.
+- No cloud, no account, no telemetry: agent hooks report to a small local daemon, `mudod`, and the app reads it.
+- Claude Code and Kiro CLI, in iTerm2, Terminal.app, Ghostty, VS Code / Cursor / Windsurf / Kiro IDE, and tmux.
 
-On the Mac, the same `mudod` runs as a LaunchAgent on `127.0.0.1:7879` when **Monitor this Mac** is on (Settings), and MuDo.app adds it as one more server named `This Mac`.
+## Quick start
 
-- `server/`: `mudod`, a single static Go binary (linux/amd64, linux/arm64 and darwin/arm64): agent hooks, daemon, installer.
-- `app/`: `MuDo.app`, a SwiftUI macOS app with no third-party dependencies.
-- Design specs: [docs/superpowers/specs/2026-10-14-mudo-design.md](docs/superpowers/specs/2026-10-14-mudo-design.md), [local Mac and SSH sessions](docs/superpowers/specs/2026-10-17-mudo-local-ssh-design.md).
-
-## Quick install
-
-Prebuilt binaries are attached to every [release](https://github.com/mvn-bachhuynh-dn/mudo/releases); what changed is in [CHANGELOG.md](CHANGELOG.md).
-
-**1. Each Linux server** (as the user that runs the agents; no Go or Docker needed):
+On a Mac with Apple silicon and macOS 26 or later:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mvn-bachhuynh-dn/mudo/main/install.sh | sh
-# with a code-server URL, so clicks can focus its Chrome tab:
-curl -fsSL https://raw.githubusercontent.com/mvn-bachhuynh-dn/mudo/main/install.sh | sh -s -- --code-server https://code.example.com
+brew install --cask mvn-bachhuynh-dn/tap/mudo
+open -a MuDo
 ```
 
-The script downloads `mudod` for the server's CPU from the latest release, checks it against `checksums.txt`, and runs `mudod install`, which prints a `mudo://add?…` link. Run it again to upgrade; `MUDO_VERSION=0.2.0` pins a version. Then make the API reachable from the Mac: [Install: server](#install-server), steps 3 and 4.
+Then MuDo Settings → **Monitor this Mac**. Start `claude` or `kiro-cli chat` in any terminal: the session shows up in the widget. Upgrade with `brew upgrade --cask mudo`.
 
-**2. The Mac** (Apple silicon, macOS 26+):
+<details>
+<summary>Without Homebrew</summary>
 
 1. Download `MuDo-macos-arm64.zip` from the [latest release](https://github.com/mvn-bachhuynh-dn/mudo/releases/latest), unzip it and move `MuDo.app` to `/Applications`.
 2. The app is not notarized by Apple, so macOS blocks the first launch. Allow it once, either in System Settings → Privacy & Security → **Open Anyway**, or with:
@@ -39,27 +35,62 @@ The script downloads `mudod` for the server's CPU from the latest release, check
    xattr -dr com.apple.quarantine /Applications/MuDo.app
    ```
 
-3. Open the `mudo://add?…` link from step 1 on the Mac (`open 'mudo://add?…'`), or paste it in Settings → Servers. Use **Test** to check the connection.
-4. Optional: Settings → **Monitor this Mac**, for agents running on the Mac itself.
+</details>
 
 The release app is signed ad hoc, so macOS asks again for Keychain access after each update. Building from source with a stable signing identity avoids that: see [Install: Mac app](#install-mac-app).
 
+## Add a remote server
+
+For agents running on a Linux server (amd64 or arm64), run this on the server as the user that runs the agents; no Go or Docker needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mvn-bachhuynh-dn/mudo/main/install.sh | sh
+# with a code-server URL, so clicks can focus its Chrome tab:
+curl -fsSL https://raw.githubusercontent.com/mvn-bachhuynh-dn/mudo/main/install.sh | sh -s -- --code-server https://code.example.com
+```
+
+The script downloads `mudod` for the server's CPU from the latest release, checks it against `checksums.txt`, and runs `mudod install`, which prints a `mudo://add?…` link. Run it again to upgrade; `MUDO_VERSION=0.2.0` pins a version.
+
+1. Make the API reachable from the Mac: [Install: server](#install-server), steps 3 and 4.
+2. Open the `mudo://add?…` link on the Mac (`open 'mudo://add?…'`), or paste it in Settings → Servers. Use **Test** to check the connection.
+
+Prebuilt binaries are attached to every [release](https://github.com/mvn-bachhuynh-dn/mudo/releases); what changed is in [CHANGELOG.md](CHANGELOG.md).
+
+## How it works
+
+![MuDo architecture: agents on each Linux server and on the Mac report to mudod through hooks; MuDo.app on the Mac reads one SSE stream per mudod](docs/images/architecture.svg)
+
+Each agent session runs hooks that report to `mudod` on the same machine. On a server, `mudod` is a systemd user service; on the Mac it runs as a LaunchAgent on `127.0.0.1:7879` when **Monitor this Mac** is on, and MuDo.app adds it as one more server named `This Mac`. The app reads one event stream per `mudod`.
+
+- `server/`: `mudod`, a single static Go binary (linux/amd64, linux/arm64 and darwin/arm64): agent hooks, daemon, installer.
+- `app/`: `MuDo.app`, a SwiftUI macOS app with no third-party dependencies.
+- Design specs: [docs/superpowers/specs/2026-10-14-mudo-design.md](docs/superpowers/specs/2026-10-14-mudo-design.md), [local Mac and SSH sessions](docs/superpowers/specs/2026-10-17-mudo-local-ssh-design.md).
+
 ## Install with an AI agent
 
-Paste this prompt into Claude Code, Kiro or another coding agent running **on the Mac** (it needs SSH access to each server). Replace the placeholders on the first lines first.
+Paste this prompt into Claude Code, Kiro or another coding agent running **on the Mac** (for remote servers it needs SSH access to each one). Replace the placeholders on the first lines first.
 
 ````text
 Install MuDo (https://github.com/mvn-bachhuynh-dn/mudo) for me: a macOS widget that shows
-my Claude Code / Kiro CLI sessions. Follow the repo's README.md ("Quick install",
-"Install: server") and stop to ask me when something below does not hold.
+my Claude Code / Kiro CLI sessions. Follow the repo's README.md ("Quick start",
+"Add a remote server", "Install: server") and stop to ask me when something below
+does not hold.
 
-Servers to monitor (SSH destinations, one per line, or "none"): <user@server1>
+Monitor agents running on this Mac: <yes/no>
+Remote servers to monitor (SSH destinations, one per line, or "none"): <user@server1>
 code-server URL per server (optional): <https://code.example.com or none>
-Also monitor agents running on this Mac: <yes/no>
 
 Steps:
 1. Check this Mac: Apple silicon and macOS 26 or later.
-2. For each server, run the install script over SSH:
+2. Install the app. With Homebrew: `brew install --cask mvn-bachhuynh-dn/tap/mudo`.
+   Without it: download MuDo-macos-arm64.zip from the latest GitHub release
+   (`gh release download -R mvn-bachhuynh-dn/mudo -p MuDo-macos-arm64.zip` or curl),
+   unzip it, move MuDo.app to /Applications, and ask me before running
+   `xattr -dr com.apple.quarantine /Applications/MuDo.app` (the app is not notarized).
+   Then `open -a MuDo`.
+3. If I want this Mac monitored, tell me to turn on MuDo Settings > This Mac >
+   "Monitor this Mac" (you cannot click it for me).
+4. For each remote server, run the install script over SSH:
    `ssh <server> 'curl -fsSL https://raw.githubusercontent.com/mvn-bachhuynh-dn/mudo/main/install.sh | sh -s -- [--code-server <url>]'`
    - If it fails with "Failed to connect to bus", or warns about lingering, show me the
      `sudo loginctl enable-linger` command from the output and wait for me to run it,
@@ -70,17 +101,10 @@ Steps:
      `curl -s -o /dev/null -w '%{http_code}' <daemon url from the link>/v1/health` gives 401.
      If not, read README "Install: server" step 4 (api_addr, firewall) and propose the
      change; ask me before editing the firewall or anything that needs sudo.
-3. Install the app: download MuDo-macos-arm64.zip from the latest GitHub release
-   (`gh release download -R mvn-bachhuynh-dn/mudo -p MuDo-macos-arm64.zip` or curl),
-   unzip it, move MuDo.app to /Applications, and ask me before running
-   `xattr -dr com.apple.quarantine /Applications/MuDo.app` (the app is not notarized).
-   Then `open /Applications/MuDo.app`.
-4. Add each server: `open '<mudo://add link>'`. macOS asks Keychain access: tell me to
-   click "Always Allow".
-5. If I want this Mac monitored, tell me to turn on MuDo Settings > This Mac >
-   "Monitor this Mac" (you cannot click it for me).
-6. Verify: send a prompt in an agent session on a server and check that it appears
-   in the MuDo widget. Report what you installed, where, and anything left for me.
+   - Add it: `open '<mudo://add link>'`. macOS asks Keychain access: tell me to click
+     "Always Allow".
+5. Verify: send a prompt in an agent session (on this Mac or a server) and check that it
+   appears in the MuDo widget. Report what you installed, where, and anything left for me.
 ````
 
 The agent only runs what the README describes; anything with `sudo`, the firewall, Gatekeeper or a macOS permission prompt is left for you.
@@ -89,7 +113,7 @@ The agent only runs what the README describes; anything with `sudo`, the firewal
 
 **Server**
 
-- Linux amd64 with a systemd user session (lingering enabled so the daemon survives logout).
+- Linux (amd64 or arm64) with a systemd user session (lingering enabled so the daemon survives logout).
 - Claude Code and/or `kiro-cli`.
 - Optional: code-server opened in Google Chrome, one window per project, so clicking a session can focus it.
 
@@ -104,7 +128,7 @@ The agent only runs what the README describes; anything with `sudo`, the firewal
 
 ## Install: server
 
-The [Quick install](#quick-install) script does steps 1 and 2 from a release. To build from source instead:
+The [install script](#add-a-remote-server) does steps 1 and 2 from a release. To build from source instead:
 
 1. Build the binary (on any machine with Go, or with Docker: `make -C server docker-build`) and copy it to the server:
 
@@ -342,10 +366,10 @@ More detail: [server/README.md](server/README.md), [app/README.md](app/README.md
 
 ### Contributing and releases
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Commits follow [Conventional Commits](https://www.conventionalcommits.org/); [release-please](https://github.com/googleapis/release-please) turns them into a release PR that bumps `version.txt` and `CHANGELOG.md`. Merging that PR tags the release, and CI attaches `mudod-linux-amd64`, `mudod-linux-arm64`, `mudod-darwin-arm64`, `MuDo-macos-arm64.zip` and `checksums.txt`. Security reports: [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Commits follow [Conventional Commits](https://www.conventionalcommits.org/); [release-please](https://github.com/googleapis/release-please) turns them into a release PR that bumps `version.txt` and `CHANGELOG.md`. Merging that PR tags the release, and CI attaches `mudod-linux-amd64`, `mudod-linux-arm64`, `mudod-darwin-arm64`, `MuDo-macos-arm64.zip` and `checksums.txt`. With the `HOMEBREW_TAP_TOKEN` secret set, it also updates the cask in [homebrew-tap](https://github.com/mvn-bachhuynh-dn/homebrew-tap) from [packaging/homebrew/mudo.rb](packaging/homebrew/mudo.rb). Security reports: [SECURITY.md](SECURITY.md).
 
 ### Uninstall
 
 - Mac: turn off Settings → **Monitor this Mac** first (removes the LaunchAgent and hooks).
 - Server: `~/.local/bin/mudod uninstall` removes the systemd unit and MuDo's hooks (config, state and binary are kept; delete `~/.config/mudo`, `~/.local/state/mudo` and `~/.local/bin/mudod` to remove everything).
-- Mac: quit MuDo and delete `/Applications/MuDo.app`.
+- Mac: `brew uninstall --cask mudo` (add `--zap` to also delete its settings), or quit MuDo and delete `/Applications/MuDo.app`.
