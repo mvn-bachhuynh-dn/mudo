@@ -16,7 +16,7 @@ targets.append(.executableTarget(name: "MuDo", dependencies: ["MuDoCore"]))
 
 let package = Package(
     name: "MuDo",
-    platforms: [.macOS("26.0")],
+    platforms: [.macOS(.v14)],
     products: products,
     targets: targets,
     swiftLanguageModes: [.v6]
