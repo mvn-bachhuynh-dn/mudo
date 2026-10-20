@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.6.0...v0.7.0) (2026-10-20)
+
+
+### Features
+
+* **app:** run on macOS 14 (Sonoma) and later ([#26](https://github.com/mvn-bachhuynh-dn/mudo/issues/26)) ([1510452](https://github.com/mvn-bachhuynh-dn/mudo/commit/1510452ed1a0a57c2aa040ae28bfbcd8a423b2a6))
+
 ## [0.6.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.5.0...v0.6.0) (2026-10-20)
 
 
