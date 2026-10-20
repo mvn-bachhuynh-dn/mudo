@@ -16,11 +16,22 @@ struct RootView: View {
         }
         .padding(8)
         .frame(width: panel.isExpanded ? 320 : nil, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: 14))
+        .panelBackground()
         .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
         .padding(12) // room so the shadow is not clipped by the panel bounds
         .fixedSize()
         .onGeometryChange(for: CGSize.self) { $0.size } action: { panel.contentSizeChanged($0) }
+    }
+}
+
+extension View {
+    /// Liquid Glass on macOS 26+, a blurred material on older systems.
+    @ViewBuilder func panelBackground() -> some View {
+        if #available(macOS 26.0, *) {
+            glassEffect(.regular, in: .rect(cornerRadius: 14))
+        } else {
+            background(.regularMaterial, in: .rect(cornerRadius: 14))
+        }
     }
 }
 

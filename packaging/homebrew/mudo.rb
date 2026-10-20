@@ -15,7 +15,7 @@ cask "mudo" do
   end
 
   depends_on arch: :arm64
-  depends_on macos: ">= :tahoe"
+  depends_on macos: ">= :sonoma"
 
   app "MuDo.app"
 

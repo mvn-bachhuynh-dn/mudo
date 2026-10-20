@@ -16,7 +16,7 @@ MuDo is a small always-on-top widget for macOS. Run a few coding agents in paral
 
 ## Quick start
 
-On a Mac with Apple silicon and macOS 26 or later:
+On a Mac with Apple silicon and macOS 14 (Sonoma) or later:
 
 ```bash
 brew install --cask mvn-bachhuynh-dn/tap/mudo
@@ -81,7 +81,7 @@ Remote servers to monitor (SSH destinations, one per line, or "none"): <user@ser
 code-server URL per server (optional): <https://code.example.com or none>
 
 Steps:
-1. Check this Mac: Apple silicon and macOS 26 or later.
+1. Check this Mac: Apple silicon and macOS 14 (Sonoma) or later.
 2. Install the app. With Homebrew: `brew install --cask mvn-bachhuynh-dn/tap/mudo`.
    Without it: download MuDo-macos-arm64.zip from the latest GitHub release
    (`gh release download -R mvn-bachhuynh-dn/mudo -p MuDo-macos-arm64.zip` or curl),
@@ -119,7 +119,7 @@ The agent only runs what the README describes; anything with `sudo`, the firewal
 
 **Mac**
 
-- macOS 26 or later.
+- macOS 14 (Sonoma) or later. The widget uses Liquid Glass on macOS 26 and a blurred background on older versions.
 - Xcode 26, only to build the app from source.
 - Google Chrome (for focusing code-server tabs).
 - Optional, for local and SSH sessions: iTerm2, Terminal.app, Ghostty 1.3+, or VS Code / Cursor / Windsurf / VSCodium / Kiro IDE; tmux.
