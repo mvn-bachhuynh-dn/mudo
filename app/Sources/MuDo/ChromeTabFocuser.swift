@@ -14,17 +14,30 @@ final class ChromeTabFocuser {
     private var inFlight = false
 
     func focus(codeServer: URL, cwd: String, project: String) {
+        let target = TabMatcher.targetURL(codeServer: codeServer, cwd: cwd)
+        Self.log.info("focus cwd=\(cwd, privacy: .public) project=\(project, privacy: .public) target=\(target.absoluteString, privacy: .public)")
+        open(target) { tabs in
+            for t in tabs where TabMatcher.isUnder(codeServer: codeServer, t.url) {
+                Self.log.info("code-server tab w=\(t.windowID, privacy: .public) t=\(t.tabIndex, privacy: .public) url=\(t.url, privacy: .public) title=\(t.title, privacy: .public)")
+            }
+            return TabMatcher.match(tabs: tabs, codeServer: codeServer, cwd: cwd, project: project).map { ($0, false) }
+        }
+    }
+
+    /// Slack web: reuse a tab of `team` (navigating it to the channel if needed), else a new window.
+    func focusSlack(_ url: URL, team: String, channel: String) {
+        Self.log.info("slack web focus target=\(url.absoluteString, privacy: .public)")
+        open(url) { SlackLink.webTab(in: $0, team: team, channel: channel) }
+    }
+
+    /// Focuses the tab `pick` returns (loading `target` in it when `navigate`), else opens `target`
+    /// in a new window.
+    private func open(_ target: URL, pick: @escaping ([ChromeTab]) -> (tab: ChromeTab, navigate: Bool)?) {
         guard !inFlight else {
-            Self.log.info("focus ignored (already in flight) cwd=\(cwd, privacy: .public)")
+            Self.log.info("focus ignored (already in flight) target=\(target.absoluteString, privacy: .public)")
             return
         }
         inFlight = true
-        start(codeServer: codeServer, cwd: cwd, project: project)
-    }
-
-    private func start(codeServer: URL, cwd: String, project: String) {
-        let target = TabMatcher.targetURL(codeServer: codeServer, cwd: cwd)
-        Self.log.info("focus cwd=\(cwd, privacy: .public) project=\(project, privacy: .public) target=\(target.absoluteString, privacy: .public)")
         guard let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.chromeBundleID) else {
             inFlight = false
             NSWorkspace.shared.open(target)
@@ -52,12 +65,10 @@ final class ChromeTabFocuser {
                 return
             case let .ok(tabs):
                 Self.log.info("listed \(tabs.count, privacy: .public) tabs in \(listMs, privacy: .public) ms")
-                for t in tabs where TabMatcher.isUnder(codeServer: codeServer, t.url) {
-                    Self.log.info("code-server tab w=\(t.windowID, privacy: .public) t=\(t.tabIndex, privacy: .public) url=\(t.url, privacy: .public) title=\(t.title, privacy: .public)")
-                }
-                if let tab = TabMatcher.match(tabs: tabs, codeServer: codeServer, cwd: cwd, project: project) {
-                    Self.log.info("matched windowID=\(tab.windowID, privacy: .public) tabIndex=\(tab.tabIndex, privacy: .public)")
-                    switch await run(ChromeScripts.focus(tab), parse: { _ in true }) {
+                if let (tab, navigate) = pick(tabs) {
+                    Self.log.info("matched windowID=\(tab.windowID, privacy: .public) tabIndex=\(tab.tabIndex, privacy: .public) navigate=\(navigate, privacy: .public)")
+                    let script = navigate ? ChromeScripts.navigate(tab, to: target) : ChromeScripts.focus(tab)
+                    switch await run(script, parse: { _ in true }) {
                     case .ok:
                         Self.log.info("focused windowID=\(tab.windowID, privacy: .public) tabIndex=\(tab.tabIndex, privacy: .public)")
                         return

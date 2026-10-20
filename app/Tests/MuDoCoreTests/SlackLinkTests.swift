@@ -3,26 +3,55 @@ import Testing
 @testable import MuDoCore
 
 @Suite struct SlackLinkTests {
-    @Test func opensAppWithTeam() {
-        #expect(SlackLink.url(channel: "C0123456789", team: "T0123456789")?.absoluteString
-            == "slack://channel?team=T0123456789&id=C0123456789")
+    let team = "T0123456789", channel = "C0123456789"
+
+    @Test func appWhenInstalledAndTeamKnown() {
+        #expect(SlackLink.target(channel: channel, team: team, hasApp: true)
+            == .app(URL(string: "slack://channel?team=T0123456789&id=C0123456789")!))
     }
 
-    @Test func noOrBadTeamGoesThroughBrowser() {
+    @Test func webWhenNoApp() {
+        #expect(SlackLink.target(channel: channel, team: " T0123456789 ", hasApp: false)
+            == .web(URL(string: "https://app.slack.com/client/T0123456789/C0123456789")!, team: "T0123456789"))
+    }
+
+    @Test func noOrBadTeamGoesThroughRedirect() {
         for team in ["", "bad"] {
-            #expect(SlackLink.url(channel: "C0123456789", team: team)?.absoluteString
-                == "https://slack.com/app_redirect?channel=C0123456789", "\(team)")
+            for hasApp in [true, false] {
+                #expect(SlackLink.target(channel: channel, team: team, hasApp: hasApp)
+                    == .web(URL(string: "https://slack.com/app_redirect?channel=C0123456789")!, team: nil), "\(team)")
+            }
         }
     }
 
-    @Test func trimsTeam() {
-        #expect(SlackLink.url(channel: "C0123456789", team: " T0123456789 ")?.absoluteString
-            == "slack://channel?team=T0123456789&id=C0123456789")
+    @Test func rejectsBadChannel() {
+        #expect(SlackLink.target(channel: "C01&x=1", team: team, hasApp: true) == nil)
+        #expect(SlackLink.target(channel: "", team: "", hasApp: false) == nil)
     }
 
-    @Test func rejectsBadChannel() {
-        #expect(SlackLink.url(channel: "C01&x=1", team: "T0123456789") == nil)
-        #expect(SlackLink.url(channel: "", team: "") == nil)
+    func tab(_ i: Int, _ url: String) -> ChromeTab { ChromeTab(windowID: 1, tabIndex: i, url: url, title: "") }
+
+    @Test func reusesTabAlreadyOnTheChannel() {
+        let tabs = [tab(1, "https://app.slack.com/client/T0123456789/C0999999999"),
+                    tab(2, "https://app.slack.com/client/T0123456789/C0123456789/thread/C0123456789-1.2")]
+        let hit = SlackLink.webTab(in: tabs, team: team, channel: channel)
+        #expect(hit?.tab == tabs[1] && hit?.navigate == false)
+    }
+
+    @Test func navigatesAnotherTabOfTheWorkspace() {
+        let tabs = [tab(1, "https://app.slack.com/client/T0999999999/C0123456789"),
+                    tab(2, "https://code.example.com/?folder=/x"),
+                    tab(3, "https://app.slack.com/client/T0123456789"),
+                    tab(4, "https://app.slack.com/client/T0123456789/C0999999999")]
+        let hit = SlackLink.webTab(in: tabs, team: team, channel: channel)
+        #expect(hit?.tab == tabs[2] && hit?.navigate == true)
+    }
+
+    @Test func noTabOfTheWorkspace() {
+        let tabs = [tab(1, "https://app.slack.com/client/T0999999999/C0123456789"),
+                    tab(2, "http://app.slack.com/client/T0123456789/C0123456789"),
+                    tab(3, "https://evil.example.com/client/T0123456789/C0123456789")]
+        #expect(SlackLink.webTab(in: tabs, team: team, channel: channel) == nil)
     }
 
     @Test func patterns() {

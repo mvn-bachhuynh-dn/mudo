@@ -154,6 +154,15 @@ import Testing
         #expect(s.contains("make new window"))
     }
 
+    @Test func navigateScriptLoadsURLInThatTabThenFocuses() {
+        let s = ChromeScripts.navigate(ChromeTab(windowID: 1234, tabIndex: 3, url: "", title: ""),
+                                       to: URL(string: "https://app.slack.com/client/T0123456789/C0123456789")!)
+        #expect(s.contains("window id 1234"))
+        #expect(s.contains(#"set URL of tab 3 of w to "https://app.slack.com/client/T0123456789/C0123456789""#))
+        #expect(s.contains("set active tab index of w to 3"))
+        #expect(s.contains("activate"))
+    }
+
     @Test func listScriptReturnsWindowIDs() {
         #expect(ChromeScripts.listTabs.contains("id of w"))
         #expect(ChromeScripts.listTabs.contains("URL of every tab of w"))

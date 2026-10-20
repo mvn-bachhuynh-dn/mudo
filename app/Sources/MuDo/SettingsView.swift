@@ -93,7 +93,7 @@ struct SettingsView: View {
             }
             Section("Slack") {
                 TextField("Workspace ID", text: $settings.slackTeamID, prompt: Text("T0123456789"))
-                Text("Used when a KiroCrew session does not carry its own. Empty: through slack.com in the browser.")
+                Text("Used when a KiroCrew session does not carry its own. Opens the Slack app, or Slack web in Chrome. Empty: through slack.com.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Hidden sessions") {

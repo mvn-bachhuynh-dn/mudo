@@ -121,6 +121,20 @@ public enum ChromeScripts {
         """
     }
 
+    /// Loads `url` in `tab`, then brings that tab to the front.
+    public static func navigate(_ tab: ChromeTab, to url: URL) -> String {
+        """
+        tell application id "com.google.Chrome"
+            set w to window id \(tab.windowID)
+            set URL of tab \(tab.tabIndex) of w to \(quoted(url.absoluteString))
+            if minimized of w then set minimized of w to false
+            set active tab index of w to \(tab.tabIndex)
+            set index of w to 1
+            activate
+        end tell
+        """
+    }
+
     public static func newWindow(_ url: URL) -> String {
         """
         tell application id "com.google.Chrome"

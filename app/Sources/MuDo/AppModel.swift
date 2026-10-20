@@ -94,8 +94,16 @@ final class AppModel {
         case .local, .ssh:
             localFocuser.focus(plan)
         case let .slack(channel, team):
-            if let url = SlackLink.url(channel: channel, team: team ?? settings.slackTeamID) {
+            let hasApp = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.tinyspeck.slackmacgap") != nil
+            switch SlackLink.target(channel: channel, team: team ?? settings.slackTeamID, hasApp: hasApp) {
+            case let .app(url)?:
                 NSWorkspace.shared.open(url)
+            case let .web(url, team?)?:
+                focuser.focusSlack(url, team: team, channel: channel)
+            case let .web(url, nil)?:
+                NSWorkspace.shared.open(url)
+            case nil:
+                break
             }
         case .none:
             onNeedsCodeServer?()
