@@ -13,6 +13,8 @@ final class AppSettings {
         static let snooze = "snoozeMinutes"
         static let ignoredPaths = "ignoredPaths"
         static let allDisplays = "showOnAllDisplays"
+        static let dodge = "dodgeOnHover"
+        static let dodgeWindow = "dodgeWindowMs"
         static let autoAck = "autoAckInView"
         static let slackTeam = "slackTeamID"
         static let checkUpdates = "checkForUpdates"
@@ -44,6 +46,16 @@ final class AppSettings {
     /// One widget per display; off: a single widget that can move between displays.
     var showOnAllDisplays: Bool {
         didSet { defaults.set(showOnAllDisplays, forKey: Key.allDisplays) }
+    }
+
+    /// The collapsed widget moves aside when the pointer arrives.
+    var dodgeOnHover: Bool {
+        didSet { defaults.set(dodgeOnHover, forKey: Key.dodge) }
+    }
+
+    /// Reaching the moved widget again within this many ms opens it (200...2000).
+    var dodgeWindowMs: Int {
+        didSet { defaults.set(dodgeWindowMs, forKey: Key.dodgeWindow) }
     }
 
     /// Acknowledge a finished session whose place is already in front of a present user.
@@ -97,6 +109,8 @@ final class AppSettings {
         snoozeMinutes = snooze > 0 ? snooze : 10
         ignoredPaths = defaults.stringArray(forKey: Key.ignoredPaths) ?? Self.defaultIgnoredPaths
         showOnAllDisplays = defaults.object(forKey: Key.allDisplays) as? Bool ?? true
+        dodgeOnHover = defaults.object(forKey: Key.dodge) as? Bool ?? true
+        dodgeWindowMs = Dodge.clampWindowMs(defaults.object(forKey: Key.dodgeWindow) as? Int)
         autoAckInView = defaults.object(forKey: Key.autoAck) as? Bool ?? true
         slackTeamID = defaults.string(forKey: Key.slackTeam) ?? ""
         checkForUpdates = defaults.object(forKey: Key.checkUpdates) as? Bool ?? true

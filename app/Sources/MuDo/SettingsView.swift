@@ -83,6 +83,12 @@ struct SettingsView: View {
                 Toggle("Show on all displays", isOn: $settings.showOnAllDisplays)
                 Text("One widget per display. Off: a single widget you can move between displays.")
                     .font(.caption).foregroundStyle(.secondary)
+                Toggle("Move aside when the pointer arrives", isOn: $settings.dodgeOnHover)
+                Stepper("Reach it again within \(settings.dodgeWindowMs) ms to use it",
+                        value: $settings.dodgeWindowMs, in: 200...2000, step: 100)
+                    .disabled(!settings.dodgeOnHover)
+                Text("The collapsed widget slides aside so you can click what is under it. Reach it again quickly to open it.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Alerts") {
                 Stepper("Blink after \(settings.staleMinutes) min", value: $settings.staleMinutes, in: 1...120)
@@ -117,6 +123,7 @@ struct SettingsView: View {
         .onChange(of: settings.staleMinutes) { model.applySettings() }
         .onChange(of: settings.snoozeMinutes) { model.applySettings() }
         .onChange(of: settings.showOnAllDisplays) { model.onPanelLayoutChange?() }
+        .onChange(of: settings.dodgeOnHover) { model.onDodgeSettingChange?() }
         .onAppear { ignoredText = settings.ignoredPaths.joined(separator: "\n") }
         .onChange(of: ignoredText) { _, text in
             settings.ignoredPaths = text.split(separator: "\n", omittingEmptySubsequences: true)

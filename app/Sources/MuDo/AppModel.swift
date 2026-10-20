@@ -16,6 +16,8 @@ final class AppModel {
     @ObservationIgnored var onNeedsCodeServer: (() -> Void)?
     /// Called when the widget layout setting (one per display or a single one) changes.
     @ObservationIgnored var onPanelLayoutChange: (() -> Void)?
+    /// Called when "Move aside when the pointer arrives" changes.
+    @ObservationIgnored var onDodgeSettingChange: (() -> Void)?
 
     @ObservationIgnored private let focuser = ChromeTabFocuser()
     @ObservationIgnored private let localFocuser = LocalFocuser()
