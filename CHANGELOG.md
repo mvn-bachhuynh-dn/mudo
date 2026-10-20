@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.5.0...v0.6.0) (2026-10-20)
+
+
+### Features
+
+* **app:** show a notice when a newer release is out ([#24](https://github.com/mvn-bachhuynh-dn/mudo/issues/24)) ([34cebf2](https://github.com/mvn-bachhuynh-dn/mudo/commit/34cebf279977f117b9d022154ed81780b492dbc0))
+
 ## [0.5.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.4.0...v0.5.0) (2026-10-20)
 
 
