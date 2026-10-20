@@ -239,6 +239,7 @@ A denied permission is logged and the click falls back to activating the app.
 - The pill blinks when a session is done and unseen for longer than "Blink after N min" (default 5).
 - Grey "offline" when every server is disconnected; "Add a server" when none is configured.
 - Hover to expand the session list; it collapses shortly after the pointer leaves. Click the pill to pin it open (click again to unpin). Drag to move it; the position is remembered.
+- The collapsed pill slides aside (down, or up near the bottom of the screen) when the pointer reaches it, so you can click what is under it; it comes back once the pointer leaves that spot. Reach it again within 500 ms (or later, by moving onto it on purpose) to open it there; turn this off or change the time with "Move aside when the pointer arrives" in Settings.
 - With several displays, each display gets its own widget, kept on that display with its own remembered position; turn off "Show on all displays" in Settings for a single widget you can move between displays.
 
 **A session row**: state icon, project (folder name), agent (`claude`/`kiro`), time in the current state (or `idle`), server name when several servers are configured, `?` when its server is offline (data may be outdated), ⏸ on a blinking row (snooze), and the last prompt on the second line.

@@ -1,6 +1,7 @@
 import AppKit
 import MuDoCore
 import Observation
+import os
 import SwiftUI
 
 final class FloatingPanel: NSPanel {
@@ -55,6 +56,8 @@ final class PanelState {
     private(set) var hovering = false
     private(set) var pinned = false
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
+    /// Called when `isExpanded` goes from true to false.
+    @ObservationIgnored var onCollapse: (() -> Void)?
     /// Whether the pointer is over the panel right now (screen coordinates, not tracking areas).
     @ObservationIgnored var pointerInside: () -> Bool = { false }
     @ObservationIgnored private var watchTask: Task<Void, Never>?
@@ -70,7 +73,9 @@ final class PanelState {
     }
 
     func togglePinned() {
+        let was = isExpanded
         pinned.toggle()
+        notifyIfCollapsed(was)
         watchPointer()
     }
 
@@ -79,6 +84,11 @@ final class PanelState {
         guard isExpanded, !pointerInside() else { return }
         pinned = false
         hovering = false
+        onCollapse?()
+    }
+
+    private func notifyIfCollapsed(_ wasExpanded: Bool) {
+        if wasExpanded, !isExpanded { onCollapse?() }
     }
 
     /// While expanded, polls the pointer instead of trusting `mouseExited`, which AppKit does not
@@ -100,6 +110,7 @@ final class PanelState {
                 } else if let since = outsideSince {
                     if clock.now - since >= Self.collapseDelay {
                         self.hovering = false
+                        self.onCollapse?()
                         break
                     }
                 } else {
@@ -122,6 +133,7 @@ final class PanelController {
 
     private let panel = FloatingPanel()
     private let state = PanelState()
+    private let settings: AppSettings
     private let defaults: UserDefaults
     /// The display this panel is confined to (`NSScreen.mudoKey`); nil = a single panel free
     /// to move between displays.
@@ -132,19 +144,34 @@ final class PanelController {
     private var movingProgrammatically = false
     /// Debounces `didMove` so a user drag is handled once, after it ends.
     private var moveSettleTask: Task<Void, Never>?
+    /// Moves the collapsed panel aside when the pointer arrives (see `Dodge`).
+    private var dodge = Dodge()
+    /// The panel's frame before it dodged; where it goes back to.
+    private var home: NSRect = .zero
+    /// Polls the pointer while dodged.
+    private var dodgePoll: Task<Void, Never>?
+    /// Target of the running move animation; nil when none runs.
+    private var animationTarget: NSRect?
+    /// Tells a finished animation from a superseded one.
+    private var animationGeneration = 0
+
+    private static let dodgePollInterval = Duration.milliseconds(50)
+    private static let log = Logger(subsystem: "dev.steve.MuDo", category: "dodge")
 
     init(model: AppModel, screenKey: String? = nil, defaults: UserDefaults = .standard) {
+        self.settings = model.settings
         self.defaults = defaults
         self.screenKey = screenKey
         let host = HoverHostingView(rootView: RootView(model: model, panel: state))
         host.sizingOptions = []
-        host.onPointerEntered = { [weak state] in state?.pointerEntered() }
+        host.onPointerEntered = { [weak self] in self?.pointerEntered() }
         panel.contentView = host
         state.pointerInside = { [weak panel] in
             guard let panel else { return false }
             return NSMouseInRect(NSEvent.mouseLocation, panel.frame, false)
         }
         state.onSizeChange = { [weak self] size in self?.resize(to: size) }
+        state.onCollapse = { [weak self] in self?.panelCollapsed() }
         observers.append(NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: panel, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.panelMoved() }
         })
@@ -169,6 +196,7 @@ final class PanelController {
     /// Hides the panel and stops observing; the controller can then be released.
     func close() {
         moveSettleTask?.cancel()
+        stopDodgePoll()
         panel.orderOut(nil)
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers = []
@@ -193,7 +221,8 @@ final class PanelController {
     /// fixed; then keeps the whole panel inside the screen's visible frame.
     private func resize(to size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
-        let old = panel.frame
+        // During a move animation `panel.frame` is a frame in flight: size around its target.
+        let old = animationTarget ?? panel.frame
         var frame = old
         frame.size = size
         frame.origin.y = old.maxY - size.height
@@ -203,8 +232,14 @@ final class PanelController {
             }
             frame = PanelPlacement.clamp(frame, to: visible)
         }
-        setFrame(frame)
-        if !state.isExpanded { saveTopLeft() }
+        if animationTarget != nil {
+            animate(to: frame)
+        } else {
+            setFrame(frame)
+        }
+        // Away from home (dodged or engaged) the position is not the user's choice. Save the
+        // target: while animating back home, `panel.frame` is still in flight.
+        if !state.isExpanded, dodge.phase == .home { saveTopLeft(frame) }
     }
 
     /// `frame` moved fully inside the visible frame of the screen it belongs to.
@@ -224,7 +259,13 @@ final class PanelController {
     /// A user drag: once it settles, pull the panel back on screen and remember the collapsed
     /// pill's position (our own moves are not saved).
     private func panelMoved() {
-        guard !movingProgrammatically else { return }
+        guard !movingProgrammatically, animationTarget == nil else { return }
+        // A user drag ends any dodge; the dragged position is handled as usual.
+        if dodge.phase != .home {
+            Self.log.debug("user move ends dodge frame=\(NSStringFromRect(self.panel.frame), privacy: .public)")
+            dodge.reset()
+            stopDodgePoll()
+        }
         moveSettleTask?.cancel()
         moveSettleTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
@@ -250,8 +291,9 @@ final class PanelController {
         if !state.isExpanded { saveTopLeft() }
     }
 
-    private func saveTopLeft() {
-        let xy = [Double(panel.frame.minX), Double(panel.frame.maxY)]
+    private func saveTopLeft(_ frame: NSRect? = nil) {
+        let frame = frame ?? panel.frame
+        let xy = [Double(frame.minX), Double(frame.maxY)]
         if let screenKey {
             var all = defaults.dictionary(forKey: Self.screenPositionsKey) ?? [:]
             all[screenKey] = xy
@@ -267,6 +309,7 @@ final class PanelController {
     }
 
     func place() {
+        endDodge()
         if screenKey != nil {
             placeOnOwnScreen()
             return
@@ -302,4 +345,116 @@ final class PanelController {
             saveTopLeft()
         }
     }
+
+    // MARK: - Dodge
+
+    private func pointerEntered() {
+        dodge.window = Double(settings.dodgeWindowMs) / 1000
+        let allowed = settings.dodgeOnHover && !state.isExpanded && NSEvent.pressedMouseButtons == 0
+        let frame = dodge.phase == .home ? (animationTarget ?? panel.frame) : home
+        let visible = confiningFrame ?? frame
+        let before = dodge.phase
+        let action = dodge.pointerEntered(now: Self.now, pointer: NSEvent.mouseLocation, home: frame, visible: visible, allowed: allowed)
+        Self.log.debug("entered phase=\(String(describing: before), privacy: .public) allowed=\(allowed, privacy: .public) frame=\(NSStringFromRect(frame), privacy: .public) pointer=\(NSStringFromPoint(NSEvent.mouseLocation), privacy: .public) -> \(String(describing: action), privacy: .public)")
+        switch action {
+        case let .moveToDodge(target):
+            home = frame
+            animate(to: target)
+            startDodgePoll()
+        case .moveHome:
+            break
+        case nil:
+            // Still dodged: an entry reported while the panel moves away from the pointer.
+            if case .dodged = dodge.phase { return }
+            stopDodgePoll()
+            state.pointerEntered()
+        case .expand:
+            stopDodgePoll()
+            state.pointerEntered()
+        }
+    }
+
+    private func panelCollapsed() {
+        let action = dodge.collapsed()
+        Self.log.debug("collapsed -> \(String(describing: action), privacy: .public)")
+        if action == .moveHome { animate(to: homeFrame()) }
+    }
+
+    /// The setting was turned off: back home at once.
+    func dodgeSettingChanged() {
+        if !settings.dodgeOnHover { endDodge() }
+    }
+
+    /// Any state → home, placed without animation.
+    private func endDodge() {
+        stopDodgePoll()
+        guard dodge.phase != .home else { return }
+        Self.log.debug("endDodge from \(String(describing: self.dodge.phase), privacy: .public)")
+        dodge.reset()
+        animationGeneration += 1
+        animationTarget = nil
+        setFrame(homeFrame())
+    }
+
+    /// `home` at the panel's current size, anchored like `resize(to:)` (top edge, and the right
+    /// edge in the right half), so a later resize to the collapsed size lands exactly on it.
+    private func homeFrame() -> NSRect {
+        let size = (animationTarget ?? panel.frame).size
+        var frame = NSRect(x: home.minX, y: home.maxY - size.height, width: size.width, height: size.height)
+        if let visible = confiningFrame {
+            if home.midX > visible.midX { frame.origin.x = home.maxX - size.width }
+            frame = PanelPlacement.clamp(frame, to: visible)
+        }
+        return frame
+    }
+
+    /// Animated programmatic move; `didMove` during the animation is not taken for a user drag.
+    private func animate(to frame: NSRect) {
+        animationGeneration += 1
+        let generation = animationGeneration
+        animationTarget = frame
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.12
+            panel.animator().setFrame(frame, display: true)
+        }, completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.animationGeneration == generation else { return }
+                self.animationTarget = nil
+            }
+        })
+    }
+
+    private func startDodgePoll() {
+        stopDodgePoll()
+        dodgePoll = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.dodgePollInterval)
+                guard !Task.isCancelled, let self else { return }
+                self.dodgeTick()
+            }
+        }
+    }
+
+    private func stopDodgePoll() {
+        dodgePoll?.cancel()
+        dodgePoll = nil
+    }
+
+    private func dodgeTick() {
+        guard case .dodged = dodge.phase else { return stopDodgePoll() }
+        let pointer = NSEvent.mouseLocation
+        // The pointer reached the dodged panel: handle it as an entry even if this poll runs
+        // before `mouseEntered`, so the panel does not move home from under it.
+        if NSMouseInRect(pointer, animationTarget ?? panel.frame, false) {
+            pointerEntered()
+            return
+        }
+        if dodge.tick(pointer: pointer, now: Self.now, home: home) == .moveHome {
+            Self.log.debug("tick moveHome pointer=\(NSStringFromPoint(pointer), privacy: .public) home=\(NSStringFromRect(self.home), privacy: .public)")
+            stopDodgePoll()
+            animate(to: homeFrame())
+        }
+    }
+
+    private static var now: Double { ProcessInfo.processInfo.systemUptime }
 }

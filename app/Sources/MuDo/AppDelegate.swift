@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let model else { return }
         let panels = PanelsController(model: model)
         model.onPanelLayoutChange = { [weak panels] in panels?.reload() }
+        model.onDodgeSettingChange = { [weak panels] in panels?.dodgeSettingChanged() }
         panels.show()
         self.panels = panels
 

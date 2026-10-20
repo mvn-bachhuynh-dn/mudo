@@ -34,6 +34,12 @@ final class PanelsController {
         reload()
     }
 
+    /// Turning the dodge off sends every panel home.
+    func dodgeSettingChanged() {
+        single?.dodgeSettingChanged()
+        for panel in perScreen.values { panel.dodgeSettingChanged() }
+    }
+
     /// Opens and closes panels to match the setting and the connected displays.
     func reload() {
         guard model.settings.showOnAllDisplays else {
