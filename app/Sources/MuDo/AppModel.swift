@@ -10,6 +10,7 @@ final class AppModel {
     let settings: AppSettings
     let store = SessionStore()
     let localDaemon = LocalDaemon()
+    let updater: Updater
     private(set) var automationDenied = false
     /// Called when a clicked session's server has no code-server URL to focus.
     @ObservationIgnored var onNeedsCodeServer: (() -> Void)?
@@ -36,11 +37,13 @@ final class AppModel {
 
     init(settings: AppSettings) {
         self.settings = settings
+        updater = Updater(settings: settings)
         focuser.onAutomationDenied = { [weak self] in self?.automationDenied = true }
         focuser.onAutomationAllowed = { [weak self] in self?.automationDenied = false }
         applySettings()
         startTimer()
         watchWakeAndNetwork()
+        updater.start()
         // After an app update the bundled mudod may be newer than the installed one.
         Task { [settings, localDaemon] in
             if settings.localServer != nil { await localDaemon.upgradeIfNeeded() }

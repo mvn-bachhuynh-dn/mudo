@@ -69,6 +69,10 @@ struct SessionListView: View {
         let store = model.store
         let rows = store.rows
         VStack(alignment: .leading, spacing: 2) {
+            if let version = model.updater.notice {
+                UpdateRow(version: version, copied: model.updater.copied,
+                          onUpgrade: { model.updater.upgrade() }, onSkip: { model.updater.skip() })
+            }
             if rows.isEmpty && store.problemServers.isEmpty {
                 Text("No sessions").font(.caption).foregroundStyle(.secondary).padding(6)
             }
@@ -80,6 +84,33 @@ struct SessionListView: View {
                 ServerStatusRow(server: server)
             }
         }
+    }
+}
+
+/// "MuDo <version> available": click runs the upgrade action, the cross skips this version.
+struct UpdateRow: View {
+    let version: String
+    let copied: Bool
+    let onUpgrade: () -> Void
+    let onSkip: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.down.circle.fill").foregroundStyle(.blue).frame(width: 14)
+            Text(copied ? "Copied: \(UpdateCheck.brewCommand)" : "MuDo \(version) available")
+                .fontWeight(.semibold).lineLimit(1)
+            Spacer(minLength: 4)
+            Button(action: onSkip) {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.borderless)
+            .help("Skip this version")
+        }
+        .font(.system(size: 12))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onUpgrade)
     }
 }
 

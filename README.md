@@ -23,7 +23,7 @@ brew install --cask mvn-bachhuynh-dn/tap/mudo
 open -a MuDo
 ```
 
-Then MuDo Settings → **Monitor this Mac**. Start `claude` or `kiro-cli chat` in any terminal: the session shows up in the widget. Upgrade with `brew upgrade --cask mudo`.
+Then MuDo Settings → **Monitor this Mac**. Start `claude` or `kiro-cli chat` in any terminal: the session shows up in the widget. Upgrade with `brew upgrade --cask mudo`. MuDo checks GitHub once a day and shows a notice when a newer release is out; it never installs anything by itself (turn off with Settings → **Check for updates**).
 
 <details>
 <summary>Without Homebrew</summary>
