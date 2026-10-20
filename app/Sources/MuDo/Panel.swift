@@ -1,6 +1,7 @@
 import AppKit
 import MuDoCore
 import Observation
+import os
 import SwiftUI
 
 final class FloatingPanel: NSPanel {
@@ -155,6 +156,7 @@ final class PanelController {
     private var animationGeneration = 0
 
     private static let dodgePollInterval = Duration.milliseconds(50)
+    private static let log = Logger(subsystem: "dev.steve.MuDo", category: "dodge")
 
     init(model: AppModel, screenKey: String? = nil, defaults: UserDefaults = .standard) {
         self.settings = model.settings
@@ -260,6 +262,7 @@ final class PanelController {
         guard !movingProgrammatically, animationTarget == nil else { return }
         // A user drag ends any dodge; the dragged position is handled as usual.
         if dodge.phase != .home {
+            Self.log.debug("user move ends dodge frame=\(NSStringFromRect(self.panel.frame), privacy: .public)")
             dodge.reset()
             stopDodgePoll()
         }
@@ -350,21 +353,31 @@ final class PanelController {
         let allowed = settings.dodgeOnHover && !state.isExpanded && NSEvent.pressedMouseButtons == 0
         let frame = dodge.phase == .home ? (animationTarget ?? panel.frame) : home
         let visible = confiningFrame ?? frame
-        switch dodge.pointerEntered(now: Self.now, home: frame, visible: visible, allowed: allowed) {
+        let before = dodge.phase
+        let action = dodge.pointerEntered(now: Self.now, pointer: NSEvent.mouseLocation, home: frame, visible: visible, allowed: allowed)
+        Self.log.debug("entered phase=\(String(describing: before), privacy: .public) allowed=\(allowed, privacy: .public) frame=\(NSStringFromRect(frame), privacy: .public) pointer=\(NSStringFromPoint(NSEvent.mouseLocation), privacy: .public) -> \(String(describing: action), privacy: .public)")
+        switch action {
         case let .moveToDodge(target):
             home = frame
             animate(to: target)
             startDodgePoll()
         case .moveHome:
             break
-        case .expand, nil:
+        case nil:
+            // Still dodged: an entry reported while the panel moves away from the pointer.
+            if case .dodged = dodge.phase { return }
+            stopDodgePoll()
+            state.pointerEntered()
+        case .expand:
             stopDodgePoll()
             state.pointerEntered()
         }
     }
 
     private func panelCollapsed() {
-        if dodge.collapsed() == .moveHome { animate(to: homeFrame()) }
+        let action = dodge.collapsed()
+        Self.log.debug("collapsed -> \(String(describing: action), privacy: .public)")
+        if action == .moveHome { animate(to: homeFrame()) }
     }
 
     /// The setting was turned off: back home at once.
@@ -376,6 +389,7 @@ final class PanelController {
     private func endDodge() {
         stopDodgePoll()
         guard dodge.phase != .home else { return }
+        Self.log.debug("endDodge from \(String(describing: self.dodge.phase), privacy: .public)")
         dodge.reset()
         animationGeneration += 1
         animationTarget = nil
@@ -436,6 +450,7 @@ final class PanelController {
             return
         }
         if dodge.tick(pointer: pointer, now: Self.now, home: home) == .moveHome {
+            Self.log.debug("tick moveHome pointer=\(NSStringFromPoint(pointer), privacy: .public) home=\(NSStringFromRect(self.home), privacy: .public)")
             stopDodgePoll()
             animate(to: homeFrame())
         }

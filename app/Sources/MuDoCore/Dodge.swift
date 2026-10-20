@@ -19,6 +19,8 @@ public struct Dodge: Equatable, Sendable {
     }
 
     public private(set) var phase: Phase = .home
+    /// Where the panel went when it dodged.
+    public private(set) var away: CGRect?
     /// Seconds after dodging during which the pointer near home keeps the widget aside.
     public var window: Double
 
@@ -30,13 +32,18 @@ public struct Dodge: Equatable, Sendable {
     }
 
     /// The pointer entered the panel. `allowed`: setting on, panel collapsed, no button pressed.
-    public mutating func pointerEntered(now: Double, home: CGRect, visible: CGRect, allowed: Bool) -> Action? {
+    /// While dodged, only an entry with the pointer over the moved panel counts: AppKit also
+    /// reports an entry as the panel starts moving away, with the pointer still at home.
+    public mutating func pointerEntered(now: Double, pointer: CGPoint, home: CGRect, visible: CGRect,
+                                        allowed: Bool) -> Action? {
         switch phase {
         case .home:
             guard allowed, let frame = Self.dodgeFrame(home: home, visible: visible) else { return nil }
             phase = .dodged(at: now)
+            away = frame
             return .moveToDodge(frame)
         case .dodged:
+            guard let away, away.contains(pointer) else { return nil }
             // Within the window: a quick second approach; after it: the pointer went there on purpose.
             phase = .engaged
             return .expand
@@ -51,6 +58,7 @@ public struct Dodge: Equatable, Sendable {
         guard case let .dodged(at) = phase, now - at > window,
               !home.insetBy(dx: -Self.homeMargin, dy: -Self.homeMargin).contains(pointer) else { return nil }
         phase = .home
+        away = nil
         return .moveHome
     }
 
@@ -58,12 +66,14 @@ public struct Dodge: Equatable, Sendable {
     public mutating func collapsed() -> Action? {
         guard phase == .engaged else { return nil }
         phase = .home
+        away = nil
         return .moveHome
     }
 
     /// Setting off, display change, `show()` or a user drag: home, no action.
     public mutating func reset() {
         phase = .home
+        away = nil
     }
 
     /// `home` moved down by its height plus `gap`, or up when that leaves `visible` at the

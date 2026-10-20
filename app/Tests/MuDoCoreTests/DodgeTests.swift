@@ -6,10 +6,13 @@ import Testing
     /// 1440×900 visible frame; the collapsed pill at its top-right corner.
     let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     let home = CGRect(x: 1270, y: 860, width: 160, height: 32)
+    /// Pointer over the home spot and over the dodged spot.
+    let atHome = CGPoint(x: 1350, y: 876)
+    let atAway = CGPoint(x: 1350, y: 836)
 
     func dodged(at t: Double = 0) -> Dodge {
         var d = Dodge(window: 0.5)
-        _ = d.pointerEntered(now: t, home: home, visible: visible, allowed: true)
+        _ = d.pointerEntered(now: t, pointer: atHome, home: home, visible: visible, allowed: true)
         return d
     }
 
@@ -27,33 +30,42 @@ import Testing
         let pill = CGRect(x: 0, y: 10, width: 160, height: 32)
         #expect(Dodge.dodgeFrame(home: pill, visible: short) == nil)
         var d = Dodge(window: 0.5)
-        #expect(d.pointerEntered(now: 0, home: pill, visible: short, allowed: true) == nil)
+        #expect(d.pointerEntered(now: 0, pointer: CGPoint(x: 80, y: 26), home: pill, visible: short, allowed: true) == nil)
         #expect(d.phase == .home)
     }
 
     @Test func firstEntryDodges() {
         var d = Dodge(window: 0.5)
         #expect(d.phase == .home)
-        #expect(d.pointerEntered(now: 3, home: home, visible: visible, allowed: true)
+        #expect(d.pointerEntered(now: 3, pointer: atHome, home: home, visible: visible, allowed: true)
             == .moveToDodge(CGRect(x: 1270, y: 820, width: 160, height: 32)))
         #expect(d.phase == .dodged(at: 3))
     }
 
     @Test func notAllowedDoesNothing() {
         var d = Dodge(window: 0.5)
-        #expect(d.pointerEntered(now: 0, home: home, visible: visible, allowed: false) == nil)
+        #expect(d.pointerEntered(now: 0, pointer: atHome, home: home, visible: visible, allowed: false) == nil)
         #expect(d.phase == .home)
     }
 
     @Test func reentryWithinWindowExpands() {
         var d = dodged()
-        #expect(d.pointerEntered(now: 0.4, home: home, visible: visible, allowed: true) == .expand)
+        #expect(d.pointerEntered(now: 0.4, pointer: atAway, home: home, visible: visible, allowed: true) == .expand)
         #expect(d.phase == .engaged)
+    }
+
+    /// AppKit reports an entry again as the panel starts moving, with the pointer still at home.
+    @Test func entryWithPointerStillAtHomeIsIgnored() {
+        var d = dodged()
+        #expect(d.pointerEntered(now: 0, pointer: atHome, home: home, visible: visible, allowed: true) == nil)
+        #expect(d.phase == .dodged(at: 0))
+        #expect(d.tick(pointer: atHome, now: 5, home: home) == nil)
+        #expect(d.phase == .dodged(at: 0))
     }
 
     @Test func reentryAfterWindowExpands() {
         var d = dodged()
-        #expect(d.pointerEntered(now: 2, home: home, visible: visible, allowed: true) == .expand)
+        #expect(d.pointerEntered(now: 2, pointer: atAway, home: home, visible: visible, allowed: true) == .expand)
         #expect(d.phase == .engaged)
     }
 
@@ -87,7 +99,7 @@ import Testing
 
     @Test func collapseWhenEngagedGoesHome() {
         var d = dodged()
-        _ = d.pointerEntered(now: 0.2, home: home, visible: visible, allowed: true)
+        _ = d.pointerEntered(now: 0.2, pointer: atAway, home: home, visible: visible, allowed: true)
         #expect(d.collapsed() == .moveHome)
         #expect(d.phase == .home)
         #expect(d.collapsed() == nil)
