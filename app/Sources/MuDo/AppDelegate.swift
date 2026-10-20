@@ -69,12 +69,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                     action: #selector(openAutomationSettings), keyEquivalent: "")
             hint.target = self
         }
+        if let version = model?.updater.notice {
+            let update = menu.addItem(withTitle: "Update to MuDo \(version)…",
+                                      action: #selector(upgrade), keyEquivalent: "")
+            update.target = self
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit MuDo", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     }
 
     @objc private func openSettings() {
         settingsWindow?.show()
+    }
+
+    @objc private func upgrade() {
+        model?.updater.upgrade()
     }
 
     @objc private func togglePause() {

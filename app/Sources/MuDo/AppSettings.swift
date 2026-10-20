@@ -15,6 +15,11 @@ final class AppSettings {
         static let allDisplays = "showOnAllDisplays"
         static let autoAck = "autoAckInView"
         static let slackTeam = "slackTeamID"
+        static let checkUpdates = "checkForUpdates"
+        static let lastUpdateCheck = "lastUpdateCheck"
+        static let latestVersion = "latestVersion"
+        static let latestReleaseURL = "latestReleaseURL"
+        static let skippedVersion = "skippedVersion"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -51,6 +56,30 @@ final class AppSettings {
         didSet { defaults.set(slackTeamID, forKey: Key.slackTeam) }
     }
 
+    /// Check GitHub once a day for a newer release (never installs anything).
+    var checkForUpdates: Bool {
+        didSet { defaults.set(checkForUpdates, forKey: Key.checkUpdates) }
+    }
+
+    /// Time of the last successful update check.
+    var lastUpdateCheck: Date? {
+        didSet { defaults.set(lastUpdateCheck, forKey: Key.lastUpdateCheck) }
+    }
+
+    /// Last seen release newer than this app; nil when the latest release is not newer.
+    var latestVersion: String? {
+        didSet { defaults.set(latestVersion, forKey: Key.latestVersion) }
+    }
+
+    var latestReleaseURL: String? {
+        didSet { defaults.set(latestReleaseURL, forKey: Key.latestReleaseURL) }
+    }
+
+    /// A version the user chose to skip: no notice for it.
+    var skippedVersion: String? {
+        didSet { defaults.set(skippedVersion, forKey: Key.skippedVersion) }
+    }
+
     static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
 
     /// Glob patterns for session folders to hide, one per entry.
@@ -70,6 +99,11 @@ final class AppSettings {
         showOnAllDisplays = defaults.object(forKey: Key.allDisplays) as? Bool ?? true
         autoAckInView = defaults.object(forKey: Key.autoAck) as? Bool ?? true
         slackTeamID = defaults.string(forKey: Key.slackTeam) ?? ""
+        checkForUpdates = defaults.object(forKey: Key.checkUpdates) as? Bool ?? true
+        lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
+        latestVersion = defaults.string(forKey: Key.latestVersion)
+        latestReleaseURL = defaults.string(forKey: Key.latestReleaseURL)
+        skippedVersion = defaults.string(forKey: Key.skippedVersion)
     }
 
     /// The server's token; "" when none is stored; nil when the Keychain read failed.

@@ -105,8 +105,9 @@ struct SettingsView: View {
             }
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
+                Toggle("Check for updates", isOn: $settings.checkForUpdates)
             } footer: {
-                Text("MuDo \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")")
+                Text("MuDo \(model.updater.current)" + (model.updater.notice.map { " · \($0) available" } ?? ""))
                     .font(.caption).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
