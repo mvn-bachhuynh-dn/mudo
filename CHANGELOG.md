@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.4.0...v0.5.0) (2026-10-20)
+
+
+### Features
+
+* open the Slack channel of KiroCrew sessions ([#20](https://github.com/mvn-bachhuynh-dn/mudo/issues/20)) ([c798525](https://github.com/mvn-bachhuynh-dn/mudo/commit/c7985257867f8d1ce3f9f9d44683e2fe49e00556))
+
+
+### Bug Fixes
+
+* **app:** allow copy and paste in Settings text fields ([#21](https://github.com/mvn-bachhuynh-dn/mudo/issues/21)) ([032e1cf](https://github.com/mvn-bachhuynh-dn/mudo/commit/032e1cf792548641817fc1a2c49bdf5346ccc6bf))
+
 ## [0.4.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.3.0...v0.4.0) (2026-10-19)
 
 
