@@ -235,8 +235,9 @@ final class PanelController {
         } else {
             setFrame(frame)
         }
-        // Away from home (dodged or engaged) the position is not the user's choice.
-        if !state.isExpanded, dodge.phase == .home { saveTopLeft() }
+        // Away from home (dodged or engaged) the position is not the user's choice. Save the
+        // target: while animating back home, `panel.frame` is still in flight.
+        if !state.isExpanded, dodge.phase == .home { saveTopLeft(frame) }
     }
 
     /// `frame` moved fully inside the visible frame of the screen it belongs to.
@@ -287,8 +288,9 @@ final class PanelController {
         if !state.isExpanded { saveTopLeft() }
     }
 
-    private func saveTopLeft() {
-        let xy = [Double(panel.frame.minX), Double(panel.frame.maxY)]
+    private func saveTopLeft(_ frame: NSRect? = nil) {
+        let frame = frame ?? panel.frame
+        let xy = [Double(frame.minX), Double(frame.maxY)]
         if let screenKey {
             var all = defaults.dictionary(forKey: Self.screenPositionsKey) ?? [:]
             all[screenKey] = xy
