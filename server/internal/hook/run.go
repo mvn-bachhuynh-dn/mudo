@@ -53,6 +53,10 @@ func Run(o Options) {
 	if o.Dump {
 		logf(o.LogPath, "dump agent=%s payload=%s", o.Agent, payload)
 	}
+	// KiroCrew background agents (no Slack channel) have nowhere to open.
+	if o.Env != nil && o.Env("KIROCREW_SPAWNED") == "1" && !validSlackChannel(o.Env("KIROCREW_CHANNEL_ID")) {
+		return
+	}
 	ev, ok, err := Normalize(o.Agent, payload)
 	if err != nil {
 		logf(o.LogPath, "%v", err)

@@ -118,3 +118,23 @@ func TestRunRecoversFromPanic(t *testing.T) {
 		t.Fatalf("log = %q, want panic entry", data)
 	}
 }
+
+func TestRunSkipsKiroCrewAgentsWithoutChannel(t *testing.T) {
+	srv, got := capture(t)
+	o := options(t, srv.URL, `{"hook_event_name":"Stop","session_id":"bg"}`)
+	o.Env = envOf(map[string]string{"KIROCREW_SPAWNED": "1"})
+	Run(o)
+	select {
+	case ev := <-got:
+		t.Fatalf("posted %+v for a channel-less KiroCrew agent", ev)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	o = options(t, srv.URL, `{"hook_event_name":"Stop","session_id":"slack"}`)
+	o.Env = envOf(map[string]string{"KIROCREW_SPAWNED": "1", "KIROCREW_CHANNEL_ID": "C0123456789"})
+	Run(o)
+	ev := next(t, got)
+	if ev.Terminal == nil || ev.Terminal.SlackChannel != "C0123456789" {
+		t.Fatalf("terminal = %+v, want slack channel C0123456789", ev.Terminal)
+	}
+}

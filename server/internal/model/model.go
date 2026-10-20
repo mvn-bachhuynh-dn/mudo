@@ -68,4 +68,6 @@ type Terminal struct {
 	SSHClientPort int    `json:"ssh_client_port,omitempty"` // field 2
 	SSHServerIP   string `json:"ssh_server_ip,omitempty"`   // field 3
 	SSHServerPort int    `json:"ssh_server_port,omitempty"` // field 4
+	SlackChannel  string `json:"slack_channel,omitempty"`   // KIROCREW_CHANNEL_ID: Slack channel of a KiroCrew session
+	SlackTeam     string `json:"slack_team,omitempty"`      // KIROCREW_SLACK_TEAM_ID: its Slack workspace
 }

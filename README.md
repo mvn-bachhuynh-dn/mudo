@@ -264,6 +264,8 @@ A denied permission is logged and the click falls back to activating the app.
 
 When the exact target cannot be found, the click activates the owning app; it never opens a new terminal window or tab. Warp, Alacritty, kitty and WezTerm are only activated.
 
+A KiroCrew session started from Slack opens its Slack channel instead. With the workspace ID (from `KIROCREW_SLACK_TEAM_ID` if KiroCrew passes it, else Settings > Slack) it opens in the Slack app, or, without the app, in Slack web in Chrome, reusing a tab of that workspace. Without the ID it goes through slack.com in the browser. KiroCrew background sessions (no channel) are not shown.
+
 **SSH sessions.** The hook on the server records `SSH_CONNECTION`; the app matches it against the Mac's established `ssh` connections (`lsof`), first by both ports, then by a single connection to that server address and port. This works over the LAN and Tailscale alike, as long as the server sees the Mac's own connection (no jump host rewriting it). Inside tmux on the server, the address of the most recently active tmux client is used. Not supported, with activation of the frontmost terminal app as fallback:
 
 - SSH ControlMaster (multiplexed) connections: every session shares one connection, so the tab cannot be told apart.

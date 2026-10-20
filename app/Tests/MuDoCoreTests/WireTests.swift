@@ -62,7 +62,7 @@ import Testing
     }
 
     @Test func decodesTerminal() throws {
-        let data = #"{"server_now":"2026-10-16T09:49:45Z","session":{"id":"a","agent":"claude","host":"h","cwd":"/x","project":"x","state":"waiting","state_since":"2026-10-16T09:49:45Z","last_prompt":"","terminal":{"program":"iTerm.app","code_server":true,"tty":"/dev/ttys004","iterm_session":"0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9","tmux_socket":"/private/tmp/tmux-501/default","tmux_pane":"%3","tmux_bin":"/opt/homebrew/bin/tmux","ssh_client_ip":"fd7a:115c:a1e0::20","ssh_client_port":52144,"ssh_server_ip":"fd7a:115c:a1e0::10","ssh_server_port":22}}}"#
+        let data = #"{"server_now":"2026-10-16T09:49:45Z","session":{"id":"a","agent":"claude","host":"h","cwd":"/x","project":"x","state":"waiting","state_since":"2026-10-16T09:49:45Z","last_prompt":"","terminal":{"program":"iTerm.app","code_server":true,"tty":"/dev/ttys004","iterm_session":"0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9","tmux_socket":"/private/tmp/tmux-501/default","tmux_pane":"%3","tmux_bin":"/opt/homebrew/bin/tmux","ssh_client_ip":"fd7a:115c:a1e0::20","ssh_client_port":52144,"ssh_server_ip":"fd7a:115c:a1e0::10","ssh_server_port":22,"slack_channel":"C0123456789"}}}"#
         guard case let .upsert(_, s)? = try StreamMessage.decode(event: "upsert", data: data) else {
             Issue.record("expected upsert")
             return
@@ -73,9 +73,9 @@ import Testing
             itermSession: "0A1B2C3D-4E5F-6071-8293-A4B5C6D7E8F9",
             tmuxSocket: "/private/tmp/tmux-501/default", tmuxPane: "%3", tmuxBin: "/opt/homebrew/bin/tmux",
             sshClientIp: "fd7a:115c:a1e0::20", sshClientPort: 52144,
-            sshServerIp: "fd7a:115c:a1e0::10", sshServerPort: 22))
+            sshServerIp: "fd7a:115c:a1e0::10", sshServerPort: 22, slackChannel: "C0123456789"))
         let all: [Any?] = [t.program, t.codeServer, t.tty, t.itermSession, t.tmuxSocket, t.tmuxPane, t.tmuxBin,
-                           t.sshClientIp, t.sshClientPort, t.sshServerIp, t.sshServerPort]
+                           t.sshClientIp, t.sshClientPort, t.sshServerIp, t.sshServerPort, t.slackChannel]
         #expect(all.allSatisfy { $0 != nil })
     }
 

@@ -43,7 +43,7 @@ final class LocalFocuser {
                 defer { inFlight = false }
                 await focusSSH(t, cwd: cwd, project: project)
             }
-        case .chrome, .none:
+        case .chrome, .slack, .none:
             return
         }
     }
@@ -109,7 +109,7 @@ final class LocalFocuser {
             else { return nil }
             let target = Target(cwd: cwd, project: project, remote: true)
             return await place(pid: conn.pid, table: table, target: target)
-        case .none:
+        case .slack, .none:
             return nil
         }
     }

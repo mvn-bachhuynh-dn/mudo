@@ -283,6 +283,17 @@ func TestTerminalMergesFieldByField(t *testing.T) {
 	if !changed || !got.CodeServer {
 		t.Fatalf("code server set: changed=%v terminal=%+v", changed, got)
 	}
+
+	// A Slack channel is added, and kept by an event that does not carry it.
+	got, changed = apply(model.Terminal{SlackChannel: "C0123456789", SlackTeam: "T0123456789"})
+	if !changed || got.SlackChannel != "C0123456789" || got.SlackTeam != "T0123456789" || got.TTY != stored.TTY {
+		t.Fatalf("slack channel: changed=%v terminal=%+v", changed, got)
+	}
+	stored.SlackChannel, stored.SlackTeam = "C0123456789", "T0123456789"
+	got, _ = apply(model.Terminal{Program: "iTerm.app"})
+	if got.SlackChannel != "C0123456789" || got.SlackTeam != "T0123456789" {
+		t.Fatalf("slack channel kept: terminal=%+v", got)
+	}
 }
 
 func TestSessionStartReplacesTerminal(t *testing.T) {

@@ -62,4 +62,30 @@ import Testing
             == .chrome(codeServer: cs, cwd: "/x/proj", project: "proj"))
         #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(t)) == .none)
     }
+
+    @Test func slackChannelWinsEverywhere() {
+        let t = TerminalInfo(codeServer: true, slackChannel: "C0123456789")
+        #expect(FocusPlan.plan(server: server("http://127.0.0.1:7879", codeServer: cs), session: session(t))
+            == .slack(channel: "C0123456789", team: nil))
+        #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879", codeServer: cs), session: session(t))
+            == .slack(channel: "C0123456789", team: nil))
+    }
+
+    @Test func slackCarriesTheSessionsValidTeam() {
+        let t = TerminalInfo(slackChannel: "C0123456789", slackTeam: "T0123456789")
+        #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(t))
+            == .slack(channel: "C0123456789", team: "T0123456789"))
+        let bad = TerminalInfo(slackChannel: "C0123456789", slackTeam: "T01&x=1")
+        #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(bad))
+            == .slack(channel: "C0123456789", team: nil))
+    }
+
+    @Test func invalidSlackChannelFallsBack() {
+        let t = TerminalInfo(codeServer: true, slackChannel: "nope")
+        let valid = TerminalInfo(codeServer: true)
+        #expect(FocusPlan.plan(server: server("http://127.0.0.1:7879", codeServer: cs), session: session(t))
+            == .local(valid, cwd: "/x/proj", project: "proj"))
+        #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879", codeServer: cs), session: session(t))
+            == .chrome(codeServer: cs, cwd: "/x/proj", project: "proj"))
+    }
 }
