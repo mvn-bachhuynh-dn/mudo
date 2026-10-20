@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.7.0...v0.8.0) (2026-10-20)
+
+
+### Features
+
+* **app:** move the collapsed widget aside when the pointer arrives ([#28](https://github.com/mvn-bachhuynh-dn/mudo/issues/28)) ([6a6882d](https://github.com/mvn-bachhuynh-dn/mudo/commit/6a6882dcfc82060571e75d084b5bcad2b01894b5))
+
 ## [0.7.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.6.0...v0.7.0) (2026-10-20)
 
 
