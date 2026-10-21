@@ -156,12 +156,14 @@ struct SessionRowView: View {
                         .help("Snooze")
                     }
                 }
-                if !row.session.lastPrompt.isEmpty {
-                    Text(row.session.lastPrompt)
+                let line = SessionLine.text(for: row.session)
+                if !line.isEmpty {
+                    Text(line)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
+                        .help(line)
                 }
             }
         }

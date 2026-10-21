@@ -88,6 +88,26 @@ import Testing
         #expect(sessions[0].terminal == nil)
     }
 
+    @Test func decodesOutputAndNotice() throws {
+        let data = #"{"server_now":"2026-10-16T09:49:45Z","session":{"id":"a","agent":"claude","host":"h","cwd":"/x","project":"x","state":"waiting","state_since":"2026-10-16T09:49:45Z","last_prompt":"","last_output":"Pushed the fix","notice":"Needs permission"}}"#
+        guard case let .upsert(_, s)? = try StreamMessage.decode(event: "upsert", data: data) else {
+            Issue.record("expected upsert")
+            return
+        }
+        #expect(s.lastOutput == "Pushed the fix")
+        #expect(s.notice == "Needs permission")
+    }
+
+    @Test func missingOutputAndNoticeAreNil() throws {
+        let msg = try #require(try StreamMessage.decode(event: "snapshot", data: Self.snapshotJSON))
+        guard case let .snapshot(_, _, sessions) = msg else {
+            Issue.record("expected snapshot, got \(msg)")
+            return
+        }
+        #expect(sessions[0].lastOutput == nil)
+        #expect(sessions[0].notice == nil)
+    }
+
     @Test func unknownEventIsNil() throws {
         #expect(try StreamMessage.decode(event: "message", data: "{}") == nil)
     }

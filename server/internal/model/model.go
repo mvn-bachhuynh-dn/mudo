@@ -31,6 +31,8 @@ type Event struct {
 	Cwd       string    `json:"cwd"`
 	Kind      EventKind `json:"event"`
 	Prompt    string    `json:"prompt,omitempty"`
+	Output    string    `json:"output,omitempty"` // agent's final reply (stop)
+	Notice    string    `json:"notice,omitempty"` // why it waits (waiting)
 	PID       int       `json:"pid"`
 	PIDStart  uint64    `json:"pid_start"`
 	// CwdFromProc marks Cwd as read from the agent process (/proc/<pid>/cwd):
@@ -51,6 +53,8 @@ type Session struct {
 	PID        int       `json:"pid"`
 	PIDStart   uint64    `json:"pid_start"`
 	LastPrompt string    `json:"last_prompt"`
+	LastOutput string    `json:"last_output,omitempty"` // reply of the last finished turn
+	Notice     string    `json:"notice,omitempty"`      // why it waits; set only while waiting
 	UpdatedAt  time.Time `json:"updated_at"`
 	Terminal   *Terminal `json:"terminal,omitempty"`
 }

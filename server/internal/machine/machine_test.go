@@ -306,3 +306,55 @@ func TestSessionStartReplacesTerminal(t *testing.T) {
 		t.Fatalf("changed=%v terminal=%+v; want a fresh %+v", changed, got.Terminal, ev.Terminal)
 	}
 }
+
+func TestLastOutput(t *testing.T) {
+	ev := event(model.EvStop)
+	ev.Output = "Pushed the fix"
+	got, changed := Apply(session(model.StateRunning), ev, "devbox", t0)
+	if !changed || got.LastOutput != "Pushed the fix" {
+		t.Fatalf("stop: last_output=%q changed=%v", got.LastOutput, changed)
+	}
+	if _, changed := Apply(&got, ev, "devbox", t0.Add(time.Minute)); changed {
+		t.Fatal("same output again must be a no-op")
+	}
+	got, _ = Apply(&got, event(model.EvPrompt), "devbox", t0)
+	if got.LastOutput != "" {
+		t.Fatalf("prompt kept last_output %q", got.LastOutput)
+	}
+}
+
+func TestNotice(t *testing.T) {
+	ev := event(model.EvWaiting)
+	ev.Notice = "Claude needs your permission to use Bash"
+	waiting, changed := Apply(session(model.StateRunning), ev, "devbox", t0)
+	if !changed || waiting.Notice != ev.Notice {
+		t.Fatalf("waiting: notice=%q changed=%v", waiting.Notice, changed)
+	}
+	for _, k := range []model.EventKind{model.EvTool, model.EvStop} {
+		got, changed := Apply(&waiting, event(k), "devbox", t0)
+		if !changed || got.State == model.StateWaiting || got.Notice != "" {
+			t.Errorf("%s after waiting: state=%s notice=%q changed=%v", k, got.State, got.Notice, changed)
+		}
+	}
+}
+
+func TestNewSessionKeepsOutputAndNotice(t *testing.T) {
+	ev := event(model.EvStop)
+	ev.Output = "Done"
+	if got, _ := Apply(nil, ev, "devbox", t0); got.LastOutput != "Done" {
+		t.Fatalf("stop: last_output=%q", got.LastOutput)
+	}
+	ev = event(model.EvWaiting)
+	ev.Notice = "Needs input"
+	if got, _ := Apply(nil, ev, "devbox", t0); got.Notice != "Needs input" {
+		t.Fatalf("waiting: notice=%q", got.Notice)
+	}
+}
+
+func TestEndClearsNotice(t *testing.T) {
+	s := session(model.StateWaiting)
+	s.Notice = "Needs input"
+	if got := End(*s, t0.Add(time.Minute)); got.Notice != "" {
+		t.Fatalf("notice = %q", got.Notice)
+	}
+}

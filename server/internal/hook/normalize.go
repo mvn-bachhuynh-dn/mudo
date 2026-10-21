@@ -4,12 +4,16 @@ package hook
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"mudo/internal/model"
 )
 
-const promptLimit = 80
+const (
+	promptLimit = 80
+	outputLimit = 160
+)
 
 // Normalize decodes a Claude Code or Kiro CLI hook payload. It returns
 // ok=false for events MuDo does not track.
@@ -28,10 +32,39 @@ func Normalize(agent string, payload []byte) (model.Event, bool, error) {
 		Cwd:       str(m, "cwd"),
 		Kind:      kind,
 	}
-	if kind == model.EvPrompt {
+	switch kind {
+	case model.EvPrompt:
 		ev.Prompt = Truncate(str(m, "prompt"), promptLimit)
+	case model.EvStop:
+		ev.Output = OneLine(str(m, "last_assistant_message", "assistant_response"), outputLimit)
+	case model.EvWaiting:
+		ev.Notice = OneLine(str(m, "message"), promptLimit)
 	}
 	return ev, true, nil
+}
+
+// listMarker matches a leading Markdown heading, quote, bullet or "1." marker
+// followed by a space.
+var listMarker = regexp.MustCompile(`^(#+|>|[-*+]|[0-9]+\.) `)
+
+// OneLine flattens a Markdown reply to plain text: fenced code blocks are
+// dropped, line markers and emphasis removed, then Truncate(s, n).
+func OneLine(s string, n int) string {
+	var keep []string
+	inFence := false
+	for _, line := range strings.Split(s, "\n") {
+		t := strings.TrimSpace(line)
+		if strings.HasPrefix(t, "```") {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		keep = append(keep, listMarker.ReplaceAllString(t, ""))
+	}
+	s = strings.NewReplacer("**", "", "__", "", "`", "").Replace(strings.Join(keep, "\n"))
+	return Truncate(s, n)
 }
 
 // Truncate collapses whitespace and cuts s to at most n runes, ending with "…" when cut.

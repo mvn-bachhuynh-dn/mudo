@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -45,6 +46,15 @@ func TestNormalize(t *testing.T) {
 		{"kiro lower-case stop", "kiro",
 			`{"hook_event_name":"stop","session_id":"k1","cwd":"/w"}`,
 			model.Event{Agent: "kiro", SessionID: "k1", Cwd: "/w", Kind: model.EvStop}, true},
+		{"claude stop with reply", "claude",
+			`{"hook_event_name":"Stop","session_id":"abc","cwd":"/w","last_assistant_message":"## Done\n\n**Pushed** ` + "`main`" + `.\n` + "```" + `\ngit log\n` + "```" + `\n- PR open"}`,
+			model.Event{Agent: "claude", SessionID: "abc", Cwd: "/w", Kind: model.EvStop, Output: "Done Pushed main. PR open"}, true},
+		{"claude stop with assistant_response", "claude",
+			`{"hook_event_name":"Stop","session_id":"abc","cwd":"/w","assistant_response":"All tests pass."}`,
+			model.Event{Agent: "claude", SessionID: "abc", Cwd: "/w", Kind: model.EvStop, Output: "All tests pass."}, true},
+		{"claude permission prompt with message", "claude",
+			`{"hook_event_name":"Notification","session_id":"abc","cwd":"/w","notification_type":"permission_prompt","message":"Claude needs your permission to use Bash"}`,
+			model.Event{Agent: "claude", SessionID: "abc", Cwd: "/w", Kind: model.EvWaiting, Notice: "Claude needs your permission to use Bash"}, true},
 		{"unknown event ignored", "claude",
 			`{"hook_event_name":"PostToolUse","session_id":"abc"}`,
 			model.Event{}, false},
@@ -78,5 +88,32 @@ func TestTruncate(t *testing.T) {
 	}
 	if got := Truncate("short", 80); got != "short" {
 		t.Fatalf("short string changed: %q", got)
+	}
+}
+
+func TestNormalizeCutsLongOutput(t *testing.T) {
+	payload, _ := json.Marshal(map[string]string{
+		"hook_event_name": "Stop", "session_id": "abc", "last_assistant_message": strings.Repeat("a", 300),
+	})
+	ev, ok, err := Normalize("claude", payload)
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	if n := len([]rune(ev.Output)); n != 160 || !strings.HasSuffix(ev.Output, "…") {
+		t.Fatalf("output = %d runes: %q", n, ev.Output)
+	}
+}
+
+func TestOneLine(t *testing.T) {
+	cases := map[string]string{
+		"# Title\n> quoted\n* star\n+ plus\n12. twelfth": "Title quoted star plus twelfth",
+		"keep __this__ and `that`":                       "keep this and that",
+		"before\n```go\nfmt.Println()\n```\nafter":       "before after",
+		"-not a list": "-not a list",
+	}
+	for in, want := range cases {
+		if got := OneLine(in, 160); got != want {
+			t.Errorf("OneLine(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
