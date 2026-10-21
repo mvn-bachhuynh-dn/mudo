@@ -15,14 +15,21 @@ var ErrNotDone = errors.New("session is not done")
 // daemon has not seen yet. It reports whether the session changed.
 func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (model.Session, bool) {
 	if prev == nil {
-		return model.Session{
+		s := model.Session{
 			ID: ev.SessionID, Agent: ev.Agent, Host: host,
 			Cwd: ev.Cwd, Project: ProjectName(ev.Cwd),
 			State: initialState(ev.Kind), StateSince: now,
 			PID: ev.PID, PIDStart: ev.PIDStart,
 			LastPrompt: ev.Prompt, UpdatedAt: now,
 			Terminal: ev.Terminal,
-		}, true
+		}
+		if ev.Kind == model.EvStop {
+			s.LastOutput = ev.Output
+		}
+		if s.State == model.StateWaiting {
+			s.Notice = ev.Notice
+		}
+		return s, true
 	}
 
 	s := *prev
@@ -58,6 +65,25 @@ func Apply(prev *model.Session, ev model.Event, host string, now time.Time) (mod
 	}
 	if next := transition(s.State, ev.Kind); next != s.State {
 		s.State, s.StateSince = next, now
+		changed = true
+	}
+	// The reply belongs to the turn it ended: a new prompt clears it, so a
+	// later Stop without output does not show the previous turn's reply.
+	output := s.LastOutput
+	if ev.Kind == model.EvPrompt {
+		output = ""
+	} else if ev.Kind == model.EvStop && ev.Output != "" {
+		output = ev.Output
+	}
+	// The notice explains a wait and goes away with it.
+	notice := s.Notice
+	if s.State != model.StateWaiting {
+		notice = ""
+	} else if ev.Kind == model.EvWaiting && ev.Notice != "" {
+		notice = ev.Notice
+	}
+	if output != s.LastOutput || notice != s.Notice {
+		s.LastOutput, s.Notice = output, notice
 		changed = true
 	}
 	if changed {
@@ -113,6 +139,7 @@ func End(s model.Session, now time.Time) model.Session {
 		return s
 	}
 	s.State, s.StateSince, s.UpdatedAt = model.StateEnded, now, now
+	s.Notice = ""
 	return s
 }
 

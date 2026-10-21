@@ -14,11 +14,15 @@ public struct Session: Codable, Equatable, Identifiable, Sendable {
     public var state: SessionState
     public var stateSince: Date
     public var lastPrompt: String
+    /// The agent's last reply and why it waits; absent from older mudod builds.
+    public var lastOutput: String?
+    public var notice: String?
     /// Absent from older mudod builds and hooks.
     public var terminal: TerminalInfo?
 
     public init(id: String, agent: String, host: String, cwd: String, project: String,
-                state: SessionState, stateSince: Date, lastPrompt: String, terminal: TerminalInfo? = nil) {
+                state: SessionState, stateSince: Date, lastPrompt: String,
+                lastOutput: String? = nil, notice: String? = nil, terminal: TerminalInfo? = nil) {
         self.id = id
         self.agent = agent
         self.host = host
@@ -27,6 +31,8 @@ public struct Session: Codable, Equatable, Identifiable, Sendable {
         self.state = state
         self.stateSince = stateSince
         self.lastPrompt = lastPrompt
+        self.lastOutput = lastOutput
+        self.notice = notice
         self.terminal = terminal
     }
 }
