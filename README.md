@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.png">
+    <img src="docs/images/logo-light.png" width="120" alt="MuDo logo: an M with a bell">
+  </picture>
+</p>
+
 # MuDo
 
 [![CI](https://github.com/mvn-bachhuynh-dn/mudo/actions/workflows/ci.yml/badge.svg)](https://github.com/mvn-bachhuynh-dn/mudo/actions/workflows/ci.yml)

@@ -42,13 +42,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         self.panels = panels
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "checklist", accessibilityDescription: "MuDo")
+        item.button?.image = Self.statusIcon()
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
         statusItem = item
 
         if model.settings.servers.isEmpty { settingsWindow?.show() }
+    }
+
+    /// The MuDo logo as a template image; the SF Symbol when run outside the app bundle (`swift run`).
+    private static func statusIcon() -> NSImage? {
+        guard let image = NSImage(named: "StatusIcon") else {
+            return NSImage(systemSymbolName: "checklist", accessibilityDescription: "MuDo")
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "MuDo"
+        return image
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {

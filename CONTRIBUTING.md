@@ -20,6 +20,8 @@ cd app && make test app          # swift test, then build/MuDo.app
 
 UI work without real agents: `mudod fake` serves scripted sessions (see the README, Development). `app/scripts/demo` runs a separate demo copy of the app for screenshots.
 
+Icons: `app/scripts/make-icons` rebuilds the menu bar icon, the app icon and the README logos from `docs/images/mudo-logo.png` (needs `uv`). Commit its outputs.
+
 ## Pull requests
 
 - Keep each PR to one change, with tests for logic changes (`server/internal/...` in Go, `app/Sources/MuDoCore` in Swift; the `MuDo` target is AppKit glue and is kept thin).

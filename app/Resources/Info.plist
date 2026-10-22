@@ -10,6 +10,8 @@
     <string>dev.steve.MuDo</string>
     <key>CFBundleExecutable</key>
     <string>MuDo</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
