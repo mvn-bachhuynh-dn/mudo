@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.9.0...v0.10.0) (2026-10-22)
+
+
+### Features
+
+* **app:** use the MuDo logo for the menu bar and app icons ([#33](https://github.com/mvn-bachhuynh-dn/mudo/issues/33)) ([e14ba5a](https://github.com/mvn-bachhuynh-dn/mudo/commit/e14ba5a7895767b137f6ac6b2fbd542ae7ee6eb2))
+
 ## [0.9.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.8.0...v0.9.0) (2026-10-21)
 
 
