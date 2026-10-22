@@ -1,0 +1,71 @@
+#!/usr/bin/env -S uv run -q --with pillow python
+"""Builds MuDo's icons from docs/images/mudo-logo.png (white logo, transparent).
+
+Writes the menu bar template image, the app icon and the README logos.
+Run from the repository root after the logo changes; commit the outputs.
+"""
+from PIL import Image, ImageDraw
+
+SRC = "docs/images/mudo-logo.png"
+
+
+def logo():
+    im = Image.open(SRC).convert("RGBA")
+    return im.crop(im.getchannel("A").getbbox())
+
+
+def fit(im, w, h):
+    """Scales im to fit w×h and centers it on a transparent canvas."""
+    s = min(w / im.width, h / im.height)
+    small = im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.LANCZOS)
+    out = Image.new("RGBA", (w, h))
+    out.paste(small, ((w - small.width) // 2, (h - small.height) // 2), small)
+    return out
+
+
+def tinted(im, rgb):
+    """Same shape in a flat color."""
+    flat = Image.new("RGBA", im.size, rgb + (255,))
+    flat.putalpha(im.getchannel("A"))
+    return flat
+
+
+def app_icon(m):
+    """macOS icon grid: an 824 px rounded square on a 1024 canvas, logo at 60%."""
+    size, body, radius = 1024, 824, 185
+    off = (size - body) // 2
+    bg = Image.new("RGBA", (size, size))
+    grad = Image.new("RGBA", (body, body))
+    top, bottom = (58, 64, 92), (18, 20, 32)
+    d = ImageDraw.Draw(grad)
+    for y in range(body):
+        t = y / (body - 1)
+        d.line([(0, y), (body, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(top, bottom)) + (255,))
+    mask = Image.new("L", (body, body))
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, body - 1, body - 1], radius, fill=255)
+    grad.putalpha(mask)
+    bg.paste(grad, (off, off), grad)
+    mark = fit(m, round(body * 0.6), round(body * 0.6))
+    p = (size - mark.width) // 2
+    bg.alpha_composite(mark, (p, p))
+    return bg
+
+
+def main():
+    m = logo()
+    # Menu bar: a template image (only alpha counts), 16 pt tall.
+    w = round(16 * m.width / m.height)
+    for scale, name in ((1, "StatusIcon.png"), (2, "StatusIcon@2x.png")):
+        tinted(fit(m, w * scale, 16 * scale), (0, 0, 0)).save(f"app/Resources/{name}")
+    icon = app_icon(m)
+    icon.save("app/Resources/AppIcon.icns",
+              sizes=[(16, 16), (32, 32), (64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024)])
+    # README: the white logo for dark mode, a dark one for light mode.
+    padded = fit(m, 240, 200)
+    padded.save("docs/images/logo-dark.png")
+    tinted(padded, (36, 41, 47)).save("docs/images/logo-light.png")
+    icon.resize((256, 256), Image.LANCZOS).save("docs/images/app-icon.png")
+
+
+if __name__ == "__main__":
+    main()

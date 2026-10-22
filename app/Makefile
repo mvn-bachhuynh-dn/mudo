@@ -22,6 +22,7 @@ app: build
 	cp "$$(swift build -c release --show-bin-path)/MuDo" $(APP)/Contents/MacOS/MuDo
 	cp Resources/Info.plist $(APP)/Contents/Info.plist
 	cp Resources/mudod $(APP)/Contents/Resources/mudod
+	cp Resources/AppIcon.icns Resources/StatusIcon.png Resources/StatusIcon@2x.png $(APP)/Contents/Resources/
 	chmod 755 $(APP)/Contents/Resources/mudod
 	@if [ -f "$(SIGN_KEYCHAIN)" ] && [ -f "$(SIGN_PASS)" ]; then \
 		security unlock-keychain -p "$$(cat "$(SIGN_PASS)")" "$(SIGN_KEYCHAIN)"; fi
