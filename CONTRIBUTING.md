@@ -20,6 +20,8 @@ cd app && make test app          # swift test, then build/MuDo.app
 
 UI work without real agents: `mudod fake` serves scripted sessions (see the README, Development). `app/scripts/demo` runs a separate demo copy of the app for screenshots.
 
+Signing: release builds are signed with a self-signed "MuDo Dev" identity (repository secrets `MUDO_SIGN_P12`, base64 of a `.p12`, and `MUDO_SIGN_P12_PASS`), so macOS keeps MuDo's Automation and Accessibility grants across updates. Without the secrets the release is signed ad-hoc. Local builds use the identity from `app/scripts/make-signing-identity`, or ad-hoc.
+
 Icons: `app/scripts/make-icons` rebuilds the menu bar icon, the app icon and the README logos from `docs/images/mudo-logo.png` (needs `uv`). Commit its outputs.
 
 ## Pull requests
