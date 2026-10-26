@@ -109,14 +109,22 @@ public enum ChromeScripts {
         end tell
     """)
 
+    /// Brings window `w` to the front. `activate` alone shows Chrome's previous front window, on
+    /// whatever display or Space it is, so the window is raised again once Chrome is active.
+    static let raise = """
+            set index of w to 1
+            activate
+            delay 0.1
+            set index of w to 1
+    """
+
     public static func focus(_ tab: ChromeTab) -> String {
         """
         tell application id "com.google.Chrome"
             set w to window id \(tab.windowID)
             if minimized of w then set minimized of w to false
             set active tab index of w to \(tab.tabIndex)
-            set index of w to 1
-            activate
+        \(raise)
         end tell
         """
     }
@@ -129,8 +137,7 @@ public enum ChromeScripts {
             set URL of tab \(tab.tabIndex) of w to \(quoted(url.absoluteString))
             if minimized of w then set minimized of w to false
             set active tab index of w to \(tab.tabIndex)
-            set index of w to 1
-            activate
+        \(raise)
         end tell
         """
     }

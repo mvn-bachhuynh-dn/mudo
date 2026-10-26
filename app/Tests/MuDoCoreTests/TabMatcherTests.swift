@@ -148,6 +148,16 @@ import Testing
         #expect(s.contains("activate"))
     }
 
+    /// Raised again after `activate`, else the first click shows Chrome's previous front window.
+    @Test func focusScriptsRaiseTheWindowAfterActivating() throws {
+        let tab = ChromeTab(windowID: 1234, tabIndex: 3, url: "", title: "")
+        for s in [ChromeScripts.focus(tab), ChromeScripts.navigate(tab, to: URL(string: "https://example.com")!)] {
+            let activate = try #require(s.range(of: "activate"))
+            let lastRaise = try #require(s.range(of: "set index of w to 1", options: .backwards))
+            #expect(activate.upperBound <= lastRaise.lowerBound)
+        }
+    }
+
     @Test func newWindowScriptQuotesURL() {
         let s = ChromeScripts.newWindow(URL(string: "http://h:8080/?folder=/a%20b")!)
         #expect(s.contains(#"set URL of active tab of w to "http://h:8080/?folder=/a%20b""#))
