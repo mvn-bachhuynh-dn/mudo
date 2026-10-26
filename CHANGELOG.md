@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.2...v0.10.3) (2026-10-26)
+
+
+### Bug Fixes
+
+* **app:** list the most recently idle session first ([#40](https://github.com/mvn-bachhuynh-dn/mudo/issues/40)) ([f32bcde](https://github.com/mvn-bachhuynh-dn/mudo/commit/f32bcdeb006fa5128d332d5ea03f8f9c1700a922))
+
 ## [0.10.2](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.1...v0.10.2) (2026-10-26)
 
 
