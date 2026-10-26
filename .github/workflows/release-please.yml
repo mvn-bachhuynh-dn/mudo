@@ -50,7 +50,33 @@ jobs:
       - name: Select Xcode 26
         run: sudo xcode-select -s "$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)" && xcodebuild -version
       - run: make -C server app-resource
-      - run: make -C app test app SIGN_ID=-
+      # Sign with the stable self-signed "MuDo Dev" identity so macOS keeps the app's
+      # permissions (Automation, Accessibility) across updates. Ad-hoc when the secrets are unset.
+      - name: Import signing identity
+        env:
+          P12: ${{ secrets.MUDO_SIGN_P12 }}
+          P12_PASS: ${{ secrets.MUDO_SIGN_P12_PASS }}
+        run: |
+          if [ -z "$P12" ] || [ -z "$P12_PASS" ]; then
+            echo "::warning::MUDO_SIGN_P12 is not set: MuDo.app is signed ad-hoc"
+            echo "SIGN_ID=-" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          kc="$RUNNER_TEMP/mudo-signing.keychain-db"
+          kpass="$(openssl rand -hex 24)"
+          security create-keychain -p "$kpass" "$kc"
+          security set-keychain-settings "$kc"
+          security unlock-keychain -p "$kpass" "$kc"
+          printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/id.p12"
+          security import "$RUNNER_TEMP/id.p12" -k "$kc" -P "$P12_PASS" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/id.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kpass" "$kc" > /dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | xargs)
+          echo "SIGN_ID=MuDo Dev" >> "$GITHUB_ENV"
+          echo "SIGN_KEYCHAIN=$kc" >> "$GITHUB_ENV"
+      - run: make -C app test app SIGN_ID="$SIGN_ID" SIGN_KEYCHAIN="$SIGN_KEYCHAIN"
+      - name: Show signature
+        run: codesign -dr - app/build/MuDo.app
       - name: Zip MuDo.app
         run: ditto -c -k --keepParent app/build/MuDo.app MuDo-macos-arm64.zip
       - uses: actions/upload-artifact@v7
