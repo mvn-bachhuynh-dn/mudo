@@ -5,6 +5,9 @@ import os
 import SwiftUI
 
 final class FloatingPanel: NSPanel {
+    /// The press that may turn into a drag of the panel.
+    private var pressed: NSEvent?
+
     init() {
         super.init(contentRect: NSRect(x: 0, y: 0, width: 160, height: 32),
                    styleMask: [.borderless, .nonactivatingPanel],
@@ -12,7 +15,9 @@ final class FloatingPanel: NSPanel {
         isFloatingPanel = true
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        isMovableByWindowBackground = true
+        // Dragging is handled in `sendEvent`: moving by the background depends on how each
+        // macOS version routes clicks through SwiftUI gestures, and failed on macOS 27.
+        isMovableByWindowBackground = false
         backgroundColor = .clear
         isOpaque = false
         hasShadow = false
@@ -20,17 +25,35 @@ final class FloatingPanel: NSPanel {
         isReleasedWhenClosed = false
         acceptsMouseMovedEvents = true
     }
+
+    /// A press that travels past `PanelDrag.threshold` drags the panel; a shorter one stays a
+    /// click for the SwiftUI content.
+    override func sendEvent(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown:
+            pressed = event
+        case .leftMouseDragged:
+            if let down = pressed, PanelDrag.started(from: down.locationInWindow, to: event.locationInWindow) {
+                pressed = nil
+                performDrag(with: down)
+                return
+            }
+        case .leftMouseUp:
+            pressed = nil
+        default:
+            break
+        }
+        super.sendEvent(event)
+    }
 }
 
 /// Hosting view that reports the pointer entering even when MuDo is not the active app,
-/// accepts the first click, and lets the background drag the panel.
+/// and accepts the first click.
 /// The always-active tracking area also delivers `mouseMoved`, which NSHostingView turns
 /// into SwiftUI hover updates, so `.onContinuousHover` works while MuDo is inactive.
 final class HoverHostingView<Content: View>: NSHostingView<Content> {
     var onPointerEntered: (() -> Void)?
     private var hoverArea: NSTrackingArea?
-
-    override var mouseDownCanMoveWindow: Bool { true }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
