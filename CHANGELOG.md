@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.1...v0.10.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* **app:** drag the widget without relying on background dragging ([#37](https://github.com/mvn-bachhuynh-dn/mudo/issues/37)) ([be88f01](https://github.com/mvn-bachhuynh-dn/mudo/commit/be88f0165cc29804406c0658192bcff3cbc1dcb5))
+
 ## [0.10.1](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.0...v0.10.1) (2026-10-26)
 
 
