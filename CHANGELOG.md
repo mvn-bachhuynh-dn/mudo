@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.3...v0.11.0) (2026-10-26)
+
+
+### Features
+
+* **app:** fold long idle lists and hide old idle sessions ([#42](https://github.com/mvn-bachhuynh-dn/mudo/issues/42)) ([c219843](https://github.com/mvn-bachhuynh-dn/mudo/commit/c21984303182fc056505f43879b0d2455ca7e83c))
+
 ## [0.10.3](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.2...v0.10.3) (2026-10-26)
 
 
