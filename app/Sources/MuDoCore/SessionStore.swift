@@ -240,7 +240,8 @@ extension SessionStore {
         }
         return out.sorted { a, b in
             if a.bucket != b.bucket { return a.bucket < b.bucket }
-            if a.since != b.since { return a.since < b.since }
+            // Idle sessions: the one you finished with last on top; others: longest in state first.
+            if a.since != b.since { return a.bucket == .idle ? a.since > b.since : a.since < b.since }
             if a.id.serverID != b.id.serverID { return a.id.serverID.uuidString < b.id.serverID.uuidString }
             return a.id.sessionID < b.id.sessionID
         }
