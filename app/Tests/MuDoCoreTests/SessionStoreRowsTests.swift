@@ -142,6 +142,17 @@ import Testing
         #expect(store.rows.map(\.session.id) == ["wait", "stale", "done", "run-old", "run-new", "idle"])
     }
 
+    /// A session just acknowledged (done → idle) heads the idle ones.
+    @Test func idleNewestFirst() {
+        let clock = TestClock(t0)
+        let (store, _) = connectedStore(clock, [
+            makeSession("idle-old", .idle, since: t0.addingTimeInterval(-3600)),
+            makeSession("idle-new", .idle, since: t0),
+            makeSession("idle-mid", .idle, since: t0.addingTimeInterval(-60)),
+        ])
+        #expect(store.rows.map(\.session.id) == ["idle-new", "idle-mid", "idle-old"])
+    }
+
     @Test func pillSummary() {
         let clock = TestClock(t0)
         let (store, a) = connectedStore(clock, [
