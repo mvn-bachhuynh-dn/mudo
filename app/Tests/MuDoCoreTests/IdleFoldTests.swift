@@ -45,8 +45,8 @@ import Testing
     }
 
     @Test func clampHours() {
-        #expect(IdleFold.clampHours(nil) == 24)
-        #expect(IdleFold.clampHours(5) == 24)
+        #expect(IdleFold.clampHours(nil) == 168)
+        #expect(IdleFold.clampHours(5) == 168)
         #expect(IdleFold.clampHours(0) == 0)
         #expect(IdleFold.clampHours(168) == 168)
     }
