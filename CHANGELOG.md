@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.0...v0.10.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **app:** bring the session's Chrome window forward on the first click ([#35](https://github.com/mvn-bachhuynh-dn/mudo/issues/35)) ([bd0242b](https://github.com/mvn-bachhuynh-dn/mudo/commit/bd0242b843bae55b6f485f8065e5b92ad2076c43))
+
 ## [0.10.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.9.0...v0.10.0) (2026-10-22)
 
 
