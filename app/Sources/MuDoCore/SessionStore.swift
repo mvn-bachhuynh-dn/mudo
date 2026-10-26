@@ -41,6 +41,8 @@ public final class SessionStore {
     public var staleAfter: TimeInterval = 300
     public var snoozeFor: TimeInterval = 600
     public var ignoreRules = IgnoreRules(patterns: [])
+    /// Idle sessions at least this long idle are left out of `rows`; nil keeps them all.
+    public var hideIdleAfter: TimeInterval?
     public private(set) var now: Date
 
     var serverStates: [UUID: ServerState] = [:]
@@ -230,6 +232,7 @@ extension SessionStore {
                 case .running: .running
                 case .idle, .ended: .idle
                 }
+                if bucket == .idle, let limit = hideIdleAfter, elapsed >= limit { continue }
                 let snoozed = snoozedUntil[key].map { $0 > now } ?? false
                 out.append(SessionRow(
                     id: key, session: s, serverName: server.name, bucket: bucket,

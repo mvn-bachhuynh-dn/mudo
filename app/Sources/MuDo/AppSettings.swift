@@ -11,6 +11,7 @@ final class AppSettings {
         static let servers = "servers"
         static let stale = "staleMinutes"
         static let snooze = "snoozeMinutes"
+        static let hideIdle = "hideIdleAfterHours"
         static let ignoredPaths = "ignoredPaths"
         static let allDisplays = "showOnAllDisplays"
         static let dodge = "dodgeOnHover"
@@ -41,6 +42,11 @@ final class AppSettings {
     }
     var snoozeMinutes: Int {
         didSet { defaults.set(snoozeMinutes, forKey: Key.snooze) }
+    }
+
+    /// Idle sessions idle this long are hidden from the list; 0 never hides them.
+    var hideIdleAfterHours: Int {
+        didSet { defaults.set(hideIdleAfterHours, forKey: Key.hideIdle) }
     }
 
     /// One widget per display; off: a single widget that can move between displays.
@@ -107,6 +113,7 @@ final class AppSettings {
         staleMinutes = stale > 0 ? stale : 5
         let snooze = defaults.integer(forKey: Key.snooze)
         snoozeMinutes = snooze > 0 ? snooze : 10
+        hideIdleAfterHours = IdleFold.clampHours(defaults.object(forKey: Key.hideIdle) as? Int)
         ignoredPaths = defaults.stringArray(forKey: Key.ignoredPaths) ?? Self.defaultIgnoredPaths
         showOnAllDisplays = defaults.object(forKey: Key.allDisplays) as? Bool ?? true
         dodgeOnHover = defaults.object(forKey: Key.dodge) as? Bool ?? true

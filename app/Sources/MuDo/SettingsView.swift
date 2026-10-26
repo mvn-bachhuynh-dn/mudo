@@ -89,6 +89,17 @@ struct SettingsView: View {
                     .disabled(!settings.dodgeOnHover)
                 Text("The collapsed widget slides aside so you can click what is under it. Reach it again quickly to open it.")
                     .font(.caption).foregroundStyle(.secondary)
+                Picker("Hide idle sessions after", selection: $settings.hideIdleAfterHours) {
+                    Text("Never").tag(0)
+                    Text("1 hour").tag(1)
+                    Text("4 hours").tag(4)
+                    Text("12 hours").tag(12)
+                    Text("1 day").tag(24)
+                    Text("3 days").tag(72)
+                    Text("1 week").tag(168)
+                }
+                Text("An idle session stays listed while its agent runs. Older ones are hidden here, not closed.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Alerts") {
                 Stepper("Blink after \(settings.staleMinutes) min", value: $settings.staleMinutes, in: 1...120)
@@ -122,6 +133,7 @@ struct SettingsView: View {
         .frame(minWidth: 480, idealWidth: 480, minHeight: 460, idealHeight: 560)
         .onChange(of: settings.staleMinutes) { model.applySettings() }
         .onChange(of: settings.snoozeMinutes) { model.applySettings() }
+        .onChange(of: settings.hideIdleAfterHours) { model.applySettings() }
         .onChange(of: settings.showOnAllDisplays) { model.onPanelLayoutChange?() }
         .onChange(of: settings.dodgeOnHover) { model.onDodgeSettingChange?() }
         .onAppear { ignoredText = settings.ignoredPaths.joined(separator: "\n") }

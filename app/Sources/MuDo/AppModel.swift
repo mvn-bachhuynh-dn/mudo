@@ -56,6 +56,8 @@ final class AppModel {
     func applySettings() {
         store.staleAfter = TimeInterval(settings.staleMinutes * 60)
         store.snoozeFor = TimeInterval(settings.snoozeMinutes * 60)
+        let hideIdle = settings.hideIdleAfterHours
+        store.hideIdleAfter = hideIdle == 0 ? nil : TimeInterval(hideIdle * 3600)
         store.ignoreRules = IgnoreRules(patterns: settings.ignoredPaths)
         store.setServers(settings.servers)
         let wanted = Dictionary(uniqueKeysWithValues: settings.servers.map { ($0.id, $0) })

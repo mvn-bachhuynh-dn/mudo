@@ -252,6 +252,7 @@ A denied permission is logged and the click falls back to activating the app.
 **A session row**: state icon, project (folder name), agent (`claude`/`kiro`), time in the current state (or `idle`), server name when several servers are configured, `?` when its server is offline (data may be outdated), ⏸ on a blinking row (snooze), and a second line. The line under a session shows the agent's last reply when it is done, why it waits when it waits, and the prompt while it runs (Claude Code; Kiro shows the prompt); hover it to read it whole.
 
 - Order: waiting, blinking, done, running, idle.
+- Only the three most recent idle sessions show; click `+N idle` to list the rest (`Show fewer` folds them again), and idle sessions older than "Hide idle sessions after" in Settings (default 1 day, or Never) are hidden, not closed.
 - **Click a row**: marks a `done` session as seen (back to `idle`) and focuses where it runs (see [Click targets](#click-targets)). For code-server sessions, tab matching, first hit wins: the tab whose `?folder=` is the session folder, then the tab of the closest parent folder, then a tab whose title contains the project name. With no match MuDo opens a new Chrome window on `<code-server>/?folder=<cwd>`. Without a code-server URL for that server, it opens Settings.
 - **Hover a blinking row**: counts as seen and snoozes it for "Snooze for N min" (default 10); ⏸ does the same.
 - Below the rows, a line per server that is `offline`, `connecting…` or `token invalid`.

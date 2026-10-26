@@ -190,6 +190,37 @@ import Testing
         #expect(store.pill.offline)
     }
 
+    @Test func idleOlderThanLimitHidden() {
+        let clock = TestClock(t0)
+        let (store, _) = connectedStore(clock, [
+            makeSession("old", .idle, since: t0.addingTimeInterval(-3600)),
+            makeSession("young", .idle, since: t0.addingTimeInterval(-3599)),
+        ])
+        store.hideIdleAfter = 3600
+        #expect(store.rows.map(\.session.id) == ["young"])
+    }
+
+    @Test func ageLimitNeverHidesOtherBuckets() {
+        let clock = TestClock(t0)
+        let (store, _) = connectedStore(clock, [
+            makeSession("done", .done, since: t0.addingTimeInterval(-7200)),
+            makeSession("run", .running, since: t0.addingTimeInterval(-7200)),
+            makeSession("wait", .waiting, since: t0.addingTimeInterval(-7200)),
+        ])
+        store.hideIdleAfter = 3600
+        #expect(store.rows.map(\.session.id) == ["wait", "done", "run"])
+        #expect(store.pill.running == 1)
+    }
+
+    @Test func nilAgeLimitKeepsAllIdle() {
+        let clock = TestClock(t0)
+        let (store, _) = connectedStore(clock, [
+            makeSession("ancient", .idle, since: t0.addingTimeInterval(-86400 * 30)),
+        ])
+        store.hideIdleAfter = nil
+        #expect(store.rows.map(\.session.id) == ["ancient"])
+    }
+
     @Test func rowCarriesServerName() {
         let clock = TestClock(t0)
         let (store, _) = connectedStore(clock, [makeSession("1", .idle, since: t0)])
