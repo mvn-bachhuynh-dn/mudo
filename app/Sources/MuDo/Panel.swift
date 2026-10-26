@@ -78,6 +78,8 @@ final class HoverHostingView<Content: View>: NSHostingView<Content> {
 final class PanelState {
     private(set) var hovering = false
     private(set) var pinned = false
+    /// The list shows every idle session instead of the newest `IdleFold.shown`; off again on collapse.
+    var showAllIdle = false
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
     /// Called when `isExpanded` goes from true to false.
     @ObservationIgnored var onCollapse: (() -> Void)?
@@ -107,11 +109,16 @@ final class PanelState {
         guard isExpanded, !pointerInside() else { return }
         pinned = false
         hovering = false
-        onCollapse?()
+        collapsed()
     }
 
     private func notifyIfCollapsed(_ wasExpanded: Bool) {
-        if wasExpanded, !isExpanded { onCollapse?() }
+        if wasExpanded, !isExpanded { collapsed() }
+    }
+
+    private func collapsed() {
+        showAllIdle = false
+        onCollapse?()
     }
 
     /// While expanded, polls the pointer instead of trusting `mouseExited`, which AppKit does not
@@ -133,7 +140,7 @@ final class PanelState {
                 } else if let since = outsideSince {
                     if clock.now - since >= Self.collapseDelay {
                         self.hovering = false
-                        self.onCollapse?()
+                        self.collapsed()
                         break
                     }
                 } else {

@@ -11,7 +11,7 @@ struct RootView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { panel.togglePinned() }
             if panel.isExpanded {
-                SessionListView(model: model)
+                SessionListView(model: model, panel: panel)
             }
         }
         .padding(8)
@@ -75,10 +75,13 @@ struct PillView: View {
 
 struct SessionListView: View {
     let model: AppModel
+    let panel: PanelState
 
     var body: some View {
         let store = model.store
-        let rows = store.rows
+        let all = store.rows
+        let fold = IdleFold.split(all, showAll: panel.showAllIdle)
+        let rows = fold.rows
         VStack(alignment: .leading, spacing: 2) {
             if let version = model.updater.notice {
                 UpdateRow(version: version, copied: model.updater.copied,
@@ -91,10 +94,32 @@ struct SessionListView: View {
                 SessionRowView(row: row, showHost: store.hasMultipleServers,
                                onOpen: { model.open(row) }, onSnooze: { model.snooze(row) })
             }
+            if fold.hidden > 0 {
+                FoldRow(text: "+\(fold.hidden) idle") { panel.showAllIdle = true }
+            } else if panel.showAllIdle, all.count(where: { $0.bucket == .idle }) > IdleFold.shown {
+                FoldRow(text: "Show fewer") { panel.showAllIdle = false }
+            }
             ForEach(store.problemServers) { server in
                 ServerStatusRow(server: server)
             }
         }
+    }
+}
+
+/// "+n idle" under a folded list, or "Show fewer" once it is unfolded.
+struct FoldRow: View {
+    let text: String
+    let action: () -> Void
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
     }
 }
 
