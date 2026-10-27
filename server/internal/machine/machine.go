@@ -121,6 +121,7 @@ func mergeTerminal(old, next model.Terminal) model.Terminal {
 		SSHServerPort: num(old.SSHServerPort, next.SSHServerPort),
 		SlackChannel:  str(old.SlackChannel, next.SlackChannel),
 		SlackTeam:     str(old.SlackTeam, next.SlackTeam),
+		SlackThread:   str(old.SlackThread, next.SlackThread),
 	}
 }
 

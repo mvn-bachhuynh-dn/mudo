@@ -285,13 +285,13 @@ func TestTerminalMergesFieldByField(t *testing.T) {
 	}
 
 	// A Slack channel is added, and kept by an event that does not carry it.
-	got, changed = apply(model.Terminal{SlackChannel: "C0123456789", SlackTeam: "T0123456789"})
-	if !changed || got.SlackChannel != "C0123456789" || got.SlackTeam != "T0123456789" || got.TTY != stored.TTY {
+	got, changed = apply(model.Terminal{SlackChannel: "C0123456789", SlackTeam: "T0123456789", SlackThread: "1700000000.000100"})
+	if !changed || got.SlackChannel != "C0123456789" || got.SlackTeam != "T0123456789" || got.SlackThread != "1700000000.000100" || got.TTY != stored.TTY {
 		t.Fatalf("slack channel: changed=%v terminal=%+v", changed, got)
 	}
-	stored.SlackChannel, stored.SlackTeam = "C0123456789", "T0123456789"
+	stored.SlackChannel, stored.SlackTeam, stored.SlackThread = "C0123456789", "T0123456789", "1700000000.000100"
 	got, _ = apply(model.Terminal{Program: "iTerm.app"})
-	if got.SlackChannel != "C0123456789" || got.SlackTeam != "T0123456789" {
+	if got.SlackChannel != "C0123456789" || got.SlackTeam != "T0123456789" || got.SlackThread != "1700000000.000100" {
 		t.Fatalf("slack channel kept: terminal=%+v", got)
 	}
 }
