@@ -66,18 +66,27 @@ import Testing
     @Test func slackChannelWinsEverywhere() {
         let t = TerminalInfo(codeServer: true, slackChannel: "C0123456789")
         #expect(FocusPlan.plan(server: server("http://127.0.0.1:7879", codeServer: cs), session: session(t))
-            == .slack(channel: "C0123456789", team: nil))
+            == .slack(channel: "C0123456789", team: nil, thread: nil))
         #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879", codeServer: cs), session: session(t))
-            == .slack(channel: "C0123456789", team: nil))
+            == .slack(channel: "C0123456789", team: nil, thread: nil))
     }
 
     @Test func slackCarriesTheSessionsValidTeam() {
         let t = TerminalInfo(slackChannel: "C0123456789", slackTeam: "T0123456789")
         #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(t))
-            == .slack(channel: "C0123456789", team: "T0123456789"))
+            == .slack(channel: "C0123456789", team: "T0123456789", thread: nil))
         let bad = TerminalInfo(slackChannel: "C0123456789", slackTeam: "T01&x=1")
         #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(bad))
-            == .slack(channel: "C0123456789", team: nil))
+            == .slack(channel: "C0123456789", team: nil, thread: nil))
+    }
+
+    @Test func slackCarriesTheSessionsValidThread() {
+        let t = TerminalInfo(slackChannel: "C0123456789", slackThread: "1700000000.000100")
+        #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(t))
+            == .slack(channel: "C0123456789", team: nil, thread: "1700000000.000100"))
+        let bad = TerminalInfo(slackChannel: "C0123456789", slackThread: "1700000000.1&x=1")
+        #expect(FocusPlan.plan(server: server("http://100.64.0.10:7879"), session: session(bad))
+            == .slack(channel: "C0123456789", team: nil, thread: nil))
     }
 
     @Test func invalidSlackChannelFallsBack() {

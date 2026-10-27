@@ -24,10 +24,10 @@ final class ChromeTabFocuser {
         }
     }
 
-    /// Slack web: reuse a tab of `team` (navigating it to the channel if needed), else a new window.
-    func focusSlack(_ url: URL, team: String, channel: String) {
+    /// Slack web: reuse a tab of `team` (navigating it to the channel or thread if needed), else a new window.
+    func focusSlack(_ url: URL, team: String, channel: String, thread: String?) {
         Self.log.info("slack web focus target=\(url.absoluteString, privacy: .public)")
-        open(url) { SlackLink.webTab(in: $0, team: team, channel: channel) }
+        open(url) { SlackLink.webTab(in: $0, team: team, channel: channel, thread: thread) }
     }
 
     /// Focuses the tab `pick` returns (loading `target` in it when `navigate`), else opens `target`

@@ -34,6 +34,7 @@ func CaptureTerminal(env func(string) string, d TerminalDeps, agentPID int) *mod
 		if team := env("KIROCREW_SLACK_TEAM_ID"); validSlackTeam(team) {
 			t.SlackTeam = team
 		}
+		t.SlackThread = slackThread(env("KIROCREW_SESSION_KEY"))
 	}
 	tmux := env("TMUX")
 	if tmux != "" {
@@ -94,3 +95,15 @@ var slackTeamRE = regexp.MustCompile(`^[TE][A-Z0-9]{6,20}$`)
 
 // validSlackTeam accepts a Slack workspace (T) or Enterprise Grid org (E) ID.
 func validSlackTeam(s string) bool { return slackTeamRE.MatchString(s) }
+
+var slackTSRE = regexp.MustCompile(`^[0-9]{1,20}\.[0-9]{1,20}$`)
+
+// slackThread returns the thread ts in a KiroCrew Slack session key (the bare
+// thread ts or "slack:<thread ts>"), else "" (e.g. a flat DM "slack:<channel>").
+func slackThread(key string) string {
+	ts := strings.TrimPrefix(key, "slack:")
+	if !slackTSRE.MatchString(ts) {
+		return ""
+	}
+	return ts
+}

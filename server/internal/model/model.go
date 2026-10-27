@@ -74,4 +74,5 @@ type Terminal struct {
 	SSHServerPort int    `json:"ssh_server_port,omitempty"` // field 4
 	SlackChannel  string `json:"slack_channel,omitempty"`   // KIROCREW_CHANNEL_ID: Slack channel of a KiroCrew session
 	SlackTeam     string `json:"slack_team,omitempty"`      // KIROCREW_SLACK_TEAM_ID: its Slack workspace
+	SlackThread   string `json:"slack_thread,omitempty"`    // thread ts from KIROCREW_SESSION_KEY: the thread the bot answers in
 }
