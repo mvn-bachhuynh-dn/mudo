@@ -17,7 +17,7 @@ import Testing
 
     @Test func webOpensTheThread() {
         #expect(SlackLink.target(channel: channel, team: team, thread: "1700000000.000100", hasApp: false)
-            == .web(URL(string: "https://app.slack.com/client/T0123456789/C0123456789/thread/C0123456789-1700000000.000100")!,
+            == .web(URL(string: "https://app.slack.com/client/T0123456789/C0123456789/thread/C0123456789-1700000000.000100?skip_today=1")!,
                      team: "T0123456789"))
         #expect(SlackLink.target(channel: channel, team: team, thread: "1700000000.1/x", hasApp: false)
             == .web(URL(string: "https://app.slack.com/client/T0123456789/C0123456789")!, team: "T0123456789"))
@@ -55,7 +55,7 @@ import Testing
 
     @Test func reusesTabAlreadyOnTheThread() {
         let tabs = [tab(1, "https://app.slack.com/client/T0123456789/C0123456789"),
-                    tab(2, "https://app.slack.com/client/T0123456789/C0123456789/thread/C0123456789-1.2")]
+                    tab(2, "https://app.slack.com/client/T0123456789/C0123456789/thread/C0123456789-1.2?skip_today=1")]
         let hit = SlackLink.webTab(in: tabs, team: team, channel: channel, thread: "1.2")
         #expect(hit?.tab == tabs[1] && hit?.navigate == false)
     }

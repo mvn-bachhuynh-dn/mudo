@@ -10,8 +10,9 @@ public enum SlackTarget: Equatable, Sendable {
 
 public enum SlackLink {
     /// With a valid `team` (trimmed): the Slack app if installed, else Slack web
-    /// (`https://app.slack.com/client/<TEAM>/<CHANNEL>`, plus `/thread/<CHANNEL>-<TS>` for a valid
-    /// `thread`). Without one: slack.com's redirect. The app link and the redirect open the channel
+    /// (`https://app.slack.com/client/<TEAM>/<CHANNEL>`, plus `/thread/<CHANNEL>-<TS>?skip_today=1`
+    /// for a valid `thread`: Slack's own permalink redirect lands there, and without `skip_today`
+    /// Slack web drops the thread and shows the channel only). Without one: slack.com's redirect. The app link and the redirect open the channel
     /// only: neither has a documented thread parameter. Nil if `channel` is not a valid channel ID.
     public static func target(channel: String, team: String, thread: String? = nil, hasApp: Bool) -> SlackTarget? {
         guard isChannel(channel) else { return nil }
@@ -20,7 +21,7 @@ public enum SlackLink {
             return URL(string: "https://slack.com/app_redirect?channel=\(channel)").map { .web($0, team: nil) }
         }
         if hasApp { return URL(string: "slack://channel?team=\(team)&id=\(channel)").map(SlackTarget.app) }
-        let path = threadPath(channel: channel, thread: thread).map { "/" + $0.joined(separator: "/") } ?? ""
+        let path = threadPath(channel: channel, thread: thread).map { "/" + $0.joined(separator: "/") + "?skip_today=1" } ?? ""
         return URL(string: "https://app.slack.com/client/\(team)/\(channel)\(path)").map { .web($0, team: team) }
     }
 
