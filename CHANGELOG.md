@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.11.0...v0.11.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **app:** open the bot's Slack thread, not just its channel ([#44](https://github.com/mvn-bachhuynh-dn/mudo/issues/44)) ([b52c261](https://github.com/mvn-bachhuynh-dn/mudo/commit/b52c2611cbbc35be4dc2f4149bdeecf50d1da15f))
+
 ## [0.11.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.10.3...v0.11.0) (2026-10-26)
 
 
