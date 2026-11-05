@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -25,6 +26,10 @@ type Config struct {
 	Host       string
 	IngestAddr string
 	APIAddr    string
+	// EndedTTL is how long an ended session stays listed before the daemon
+	// forgets it (`ended_ttl`, a Go duration such as "168h"). Zero means the
+	// store default.
+	EndedTTL time.Duration
 }
 
 func Load(path string) (Config, error) {
@@ -33,7 +38,8 @@ func Load(path string) (Config, error) {
 		return Config{}, fmt.Errorf("config: %w", err)
 	}
 	var c Config
-	fields := map[string]*string{"token": &c.Token, "host": &c.Host, "ingest_addr": &c.IngestAddr, "api_addr": &c.APIAddr}
+	var endedTTL string
+	fields := map[string]*string{"token": &c.Token, "host": &c.Host, "ingest_addr": &c.IngestAddr, "api_addr": &c.APIAddr, "ended_ttl": &endedTTL}
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for n := 1; sc.Scan(); n++ {
 		line := strings.TrimSpace(sc.Text())
@@ -57,6 +63,13 @@ func Load(path string) (Config, error) {
 	if err := sc.Err(); err != nil {
 		return Config{}, fmt.Errorf("config: %s: %w", path, err)
 	}
+	if endedTTL != "" {
+		d, err := time.ParseDuration(endedTTL)
+		if err != nil || d <= 0 {
+			return Config{}, fmt.Errorf("config: %s: ended_ttl must be a positive duration such as \"168h\"", path)
+		}
+		c.EndedTTL = d
+	}
 	if c.IngestAddr == "" {
 		c.IngestAddr = DefaultIngestAddr
 	}
@@ -75,6 +88,9 @@ func (c Config) Write(path string) error {
 	}
 	content := fmt.Sprintf("# MuDo daemon config\ntoken = %q\nhost = %q\ningest_addr = %q\napi_addr = %q\n",
 		c.Token, c.Host, c.IngestAddr, c.APIAddr)
+	if c.EndedTTL > 0 {
+		content += fmt.Sprintf("ended_ttl = %q\n", c.EndedTTL.String())
+	}
 	// WriteFile only applies the mode when it creates the file, so write a
 	// temp file, force 0600, then rename over the target (atomic).
 	tmp := path + ".tmp"

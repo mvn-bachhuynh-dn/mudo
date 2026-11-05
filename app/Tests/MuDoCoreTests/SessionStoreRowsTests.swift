@@ -123,10 +123,23 @@ import Testing
         #expect(store.rows[0].bucket == .stale)
     }
 
-    @Test func endedHidden() {
+    @Test func endedListedAsIdle() {
         let clock = TestClock(t0)
         let (store, _) = connectedStore(clock, [makeSession("1", .ended, since: t0), makeSession("2", .idle, since: t0)])
-        #expect(store.rows.map(\.session.id) == ["2"])
+        #expect(Set(store.rows.map(\.session.id)) == ["1", "2"])
+        #expect(store.rows.allSatisfy { $0.bucket == .idle })
+    }
+
+    @Test func endedHiddenAfterHideIdleLimit() {
+        let clock = TestClock(t0)
+        let (store, _) = connectedStore(clock, [makeSession("1", .ended, since: t0)])
+        store.hideIdleAfter = 3600
+        clock.advance(3599)
+        store.tick()
+        #expect(store.rows.map(\.session.id) == ["1"])
+        clock.advance(2)
+        store.tick()
+        #expect(store.rows.isEmpty)
     }
 
     @Test func sortOrder() {

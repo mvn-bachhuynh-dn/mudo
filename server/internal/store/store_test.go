@@ -111,17 +111,37 @@ func TestSweepEndsDeadSessionsAndExpiresEnded(t *testing.T) {
 		t.Fatalf("got %+v", m)
 	}
 
-	c.now = t0.Add(59 * time.Minute)
+	c.now = t0.Add(DefaultEndedTTL - time.Minute)
 	s.Sweep()
 	expectQuiet(t, ch)
 
-	c.now = t0.Add(61 * time.Minute)
+	c.now = t0.Add(DefaultEndedTTL + time.Minute)
 	s.Sweep()
 	if m := recv(t, ch); m.Type != MsgRemove || m.ID != "s1" {
 		t.Fatalf("got %+v", m)
 	}
 	if n := len(s.Snapshot()); n != 0 {
 		t.Fatalf("%d sessions left", n)
+	}
+}
+
+func TestSweepHonoursCustomEndedTTL(t *testing.T) {
+	c := &clock{t0}
+	dead := map[int]bool{42: true}
+	s := New(Options{Host: "devbox", Path: filepath.Join(t.TempDir(), "state.json"), Now: c.Now,
+		Alive: func(pid int, _ uint64) bool { return !dead[pid] }, EndedTTL: time.Hour})
+	s.Apply(ev("s1", model.EvPrompt))
+	s.Sweep() // process is gone: ended at t0
+
+	c.now = t0.Add(59 * time.Minute)
+	s.Sweep()
+	if n := len(s.Snapshot()); n != 1 {
+		t.Fatalf("%d sessions before TTL, want 1", n)
+	}
+	c.now = t0.Add(61 * time.Minute)
+	s.Sweep()
+	if n := len(s.Snapshot()); n != 0 {
+		t.Fatalf("%d sessions after TTL, want 0", n)
 	}
 }
 

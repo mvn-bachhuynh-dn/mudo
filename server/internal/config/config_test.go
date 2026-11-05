@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestWriteLoadRoundTrip(t *testing.T) {
@@ -21,6 +22,29 @@ func TestWriteLoadRoundTrip(t *testing.T) {
 	}
 	got, err := Load(path)
 	if err != nil || got != want {
+		t.Fatalf("got %+v, err %v", got, err)
+	}
+}
+
+func TestEndedTTLRoundTripAndDefault(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	want := Config{Token: "abc", IngestAddr: DefaultIngestAddr, APIAddr: "0.0.0.0:7879", EndedTTL: 72 * time.Hour}
+	if err := want.Write(path); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Load(path); err != nil || got != want {
+		t.Fatalf("got %+v, err %v", got, err)
+	}
+
+	unset := Config{Token: "abc", IngestAddr: DefaultIngestAddr, APIAddr: "0.0.0.0:7879"}
+	if err := unset.Write(path); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if strings.Contains(string(data), "ended_ttl") {
+		t.Fatalf("unset ended_ttl written:\n%s", data)
+	}
+	if got, err := Load(path); err != nil || got.EndedTTL != 0 {
 		t.Fatalf("got %+v, err %v", got, err)
 	}
 }
@@ -69,6 +93,8 @@ func TestLoadErrors(t *testing.T) {
 		"bad quote":   "token = abc\n",
 		"no equals":   "token\n",
 		"unknown key": "token = \"a\"\napi_addr = \"b\"\ncolour = \"red\"\n",
+		"bad ttl":     "token = \"a\"\napi_addr = \"b\"\nended_ttl = \"week\"\n",
+		"zero ttl":    "token = \"a\"\napi_addr = \"b\"\nended_ttl = \"0s\"\n",
 	}
 	for name, content := range cases {
 		path := filepath.Join(dir, strings.ReplaceAll(name, " ", "_"))

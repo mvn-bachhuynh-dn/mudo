@@ -222,7 +222,9 @@ extension SessionStore {
         var out: [SessionRow] = []
         for (serverID, server) in serverStates {
             let offline = server.status != .connected
-            for s in server.sessions.values where s.state != .ended && !ignoreRules.ignores(cwd: s.cwd) {
+            // Ended sessions (process closed, e.g. by an agent host's idle timeout)
+            // stay listed as idle until "Hide idle sessions after" or the daemon's ended_ttl.
+            for s in server.sessions.values where !ignoreRules.ignores(cwd: s.cwd) {
                 let key = SessionKey(serverID: serverID, sessionID: s.id)
                 let since = s.stateSince.addingTimeInterval(-server.offset)
                 let elapsed = max(0, now.timeIntervalSince(since))
