@@ -31,6 +31,11 @@ type Msg struct {
 	ID      string
 }
 
+// DefaultEndedTTL keeps an ended session for a week, matching the app's
+// default "Hide idle sessions after", so sessions whose host closes idle
+// agent processes after a few minutes still list their recent work.
+const DefaultEndedTTL = 7 * 24 * time.Hour
+
 type Options struct {
 	Host     string
 	Path     string // state file; empty disables persistence
@@ -61,7 +66,7 @@ func New(o Options) *Store {
 		o.Cwd = func(int) (string, error) { return "", errors.New("cwd unavailable") }
 	}
 	if o.EndedTTL == 0 {
-		o.EndedTTL = time.Hour
+		o.EndedTTL = DefaultEndedTTL
 	}
 	return &Store{
 		opts:     o,
