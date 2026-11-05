@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.11.1...v0.12.0) (2026-11-05)
+
+
+### Features
+
+* keep ended sessions in the widget (ended_ttl, default 1 week) ([#46](https://github.com/mvn-bachhuynh-dn/mudo/issues/46)) ([831dc61](https://github.com/mvn-bachhuynh-dn/mudo/commit/831dc61bb32e00eadf524c2447ba2201814a788d))
+
 ## [0.11.1](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.11.0...v0.11.1) (2026-10-27)
 
 
