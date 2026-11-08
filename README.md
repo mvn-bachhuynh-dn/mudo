@@ -259,6 +259,10 @@ A denied permission is logged and the click falls back to activating the app.
 
 **Auto-acknowledge.** A `done` session is marked seen without a click when both hold: its place is the one in front (the active Chrome code-server tab, iTerm2 or Terminal.app tab, tmux pane, `ssh` tab, or VS Code-like editor window of that project), and you are at the Mac (input in the last minute, screen not locked). MuDo checks every 2 s, only while a `done` session is waiting, and never focuses anything. Ghostty and other apps are never auto-acknowledged. Turn it off with "Auto-acknowledge when already in view" in Settings.
 
+### Accounts tab (cswap)
+
+If [claude-swap](https://pypi.org/project/claude-swap/) is installed on the Mac (`cswap` in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`), the expanded widget gets a **Sessions | Accounts** switch. Accounts lists what `cswap list --json` reports: the active account (check mark), the 5 h and 7 d usage bars (green under 70 %, orange from 70 %, red from 90 %), model-scoped limits such as Fable, and the reset countdown. Click an inactive account to run `cswap switch <number>`; a switch applies to new Claude Code sessions, running ones keep their account. An account that needs a new login is not clickable, and a reading older than the live one is dimmed. The list refreshes when the tab opens and every minute while it is shown. Turn the tab off with "Show Accounts tab (cswap)" in Settings. Adding, removing and tuning accounts stays in the `cswap` CLI.
+
 ### Click targets
 
 | Session runs in | Click focuses |
@@ -329,7 +333,7 @@ The connection could not be matched: ControlMaster, mosh, a jump host, or a sess
 The error under the toggle shows the `mudod` output. Daemon log: `~/Library/Logs/mudod.log`; service: `launchctl print gui/$(id -u)/dev.mudo.mudod`. A missing bundled binary means the app was built without `make -C server app-resource`.
 
 **Keychain or Chrome prompts after every rebuild.**
-The app is signed ad-hoc. Run `app/scripts/make-signing-identity` once, rebuild, and allow once more.
+The app is signed ad-hoc, or with the self-signed "MuDo Dev" identity. A self-signed identity has no Team ID, so the Keychain ties "Always Allow" to each build's code hash and asks again for every new build, even though the signature looks stable (`securityd` logs `ACL partition mismatch`). `make -C app` therefore prefers a valid "Apple Development" identity from your keychain when there is one: it carries a Team ID, and one "Always Allow" then covers later builds. Build from a terminal on the Mac, not over SSH (the login keychain is locked there and `codesign` fails with `errSecInternalComponent`). Without an Apple identity, run `app/scripts/make-signing-identity` once, rebuild, and allow once more (it fixes the Automation prompts, not the Keychain one). Release builds from GitHub are signed with "MuDo Dev", so they still ask once per update.
 
 **Server-side logs.**
 

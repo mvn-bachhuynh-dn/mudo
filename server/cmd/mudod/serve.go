@@ -53,11 +53,19 @@ func runServe(args []string) error {
 		close(stored)
 	}()
 
+	var cswap api.CswapRunner
+	if home, err := os.UserHomeDir(); err == nil {
+		if bin := api.FindCswap(home); bin != "" {
+			cswap = api.ExecCswap(bin)
+			logger.Printf("cswap found at %s", bin)
+		}
+	}
+
 	base := func(net.Listener) context.Context { return ctx }
 	ingest := &http.Server{Addr: cfg.IngestAddr, Handler: api.Ingest(st, cfg.IngestAddr), BaseContext: base}
 	client := &http.Server{Addr: cfg.APIAddr, BaseContext: base, ReadHeaderTimeout: 10 * time.Second, Handler: api.Client(st, api.ClientOptions{
 		Token: cfg.Token, Host: host, Version: version, Started: time.Now(), Now: time.Now,
-		PingEvery: 15 * time.Second, SubBuffer: 64,
+		PingEvery: 15 * time.Second, SubBuffer: 64, Cswap: cswap,
 	})}
 
 	errc := make(chan error, 2)
