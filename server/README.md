@@ -69,6 +69,15 @@ tail -f ~/Library/Logs/mudod.log
 
 The hook endpoint (`127.0.0.1:7878/event`) answers 403 to any request with an `Origin` header, a `Content-Type` other than `application/json`, or a `Host` that is not the ingest's own loopback address. This stops a web page in a local browser from posting fake events; `mudod hook` sends none of these. It applies on Linux and macOS.
 
+## cswap (claude-swap) accounts
+
+If `cswap` is installed for the daemon's user (`~/.local/bin`, `/usr/local/bin` or `/opt/homebrew/bin`; `PATH` is not searched), the client API (port 7879, bearer token) also serves:
+
+- `GET /v1/cswap`: the output of `cswap list --json`.
+- `POST /v1/cswap/switch/{number}`: runs `cswap switch <number>`; `number` is 1 to 3 digits, anything else is a 400. 204 on success, 502 with cswap's first error line on failure.
+
+Without `cswap` both answer 404. One cswap command runs at a time; each has a 20 s limit. The log shows `cswap found at <path>` at start. cswap keeps its accounts per machine, so the app lists each server separately from the Mac's own.
+
 ## Terminal info
 
 The hook records where the agent runs (`TERM_PROGRAM`, code-server, TTY, iTerm2 session id, tmux socket/pane/binary, `SSH_CONNECTION`) and the daemon stores it on the session as `terminal`, so the app can focus the right terminal tab or editor window. Inside tmux on a server, `SSH_CONNECTION` is taken from the most recently active tmux client. Missing fields never fail the hook.
