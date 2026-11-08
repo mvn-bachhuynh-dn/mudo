@@ -41,6 +41,8 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.created == 'true'
     runs-on: macos-26
+    # Holds the signing key: the job waits for the owner's approval, and only runs on a protected branch.
+    environment: release
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
