@@ -19,6 +19,7 @@ final class AppSettings {
         static let autoAck = "autoAckInView"
         static let slackTeam = "slackTeamID"
         static let checkUpdates = "checkForUpdates"
+        static let showAccounts = "showAccountsTab"
         static let lastUpdateCheck = "lastUpdateCheck"
         static let latestVersion = "latestVersion"
         static let latestReleaseURL = "latestReleaseURL"
@@ -98,6 +99,11 @@ final class AppSettings {
         didSet { defaults.set(skippedVersion, forKey: Key.skippedVersion) }
     }
 
+    /// Show the Accounts tab (cswap) when `cswap` is installed.
+    var showAccountsTab: Bool {
+        didSet { defaults.set(showAccountsTab, forKey: Key.showAccounts) }
+    }
+
     static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
 
     /// Glob patterns for session folders to hide, one per entry.
@@ -121,6 +127,7 @@ final class AppSettings {
         autoAckInView = defaults.object(forKey: Key.autoAck) as? Bool ?? true
         slackTeamID = defaults.string(forKey: Key.slackTeam) ?? ""
         checkForUpdates = defaults.object(forKey: Key.checkUpdates) as? Bool ?? true
+        showAccountsTab = defaults.object(forKey: Key.showAccounts) as? Bool ?? true
         lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
         latestVersion = defaults.string(forKey: Key.latestVersion)
         latestReleaseURL = defaults.string(forKey: Key.latestReleaseURL)

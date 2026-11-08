@@ -11,7 +11,15 @@ struct RootView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { panel.togglePinned() }
             if panel.isExpanded {
-                SessionListView(model: model, panel: panel)
+                let showTabs = model.settings.showAccountsTab && model.cswap.available
+                if showTabs {
+                    TabBar(tab: Bindable(panel).tab)
+                }
+                if showTabs && panel.tab == .accounts {
+                    AccountListView(cswap: model.cswap)
+                } else {
+                    SessionListView(model: model, panel: panel)
+                }
             }
         }
         .padding(8)
@@ -32,6 +40,25 @@ extension View {
         } else {
             background(.regularMaterial, in: .rect(cornerRadius: 14))
         }
+    }
+}
+
+enum PanelTab: String, CaseIterable, Identifiable {
+    case sessions = "Sessions"
+    case accounts = "Accounts"
+    var id: String { rawValue }
+}
+
+struct TabBar: View {
+    @Binding var tab: PanelTab
+
+    var body: some View {
+        Picker("", selection: $tab) {
+            ForEach(PanelTab.allCases) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .controlSize(.small)
     }
 }
 
@@ -82,6 +109,8 @@ struct SessionListView: View {
         let all = store.rows
         let fold = IdleFold.split(all, showAll: panel.showAllIdle)
         let rows = fold.rows
+        // The widget is not taller than the screen: a long list scrolls.
+        ScrollView(.vertical, showsIndicators: true) {
         VStack(alignment: .leading, spacing: 2) {
             if let version = model.updater.notice {
                 UpdateRow(version: version, copied: model.updater.copied,
@@ -103,6 +132,8 @@ struct SessionListView: View {
                 ServerStatusRow(server: server)
             }
         }
+        }
+        .frame(maxHeight: AccountListView.maxListHeight)
     }
 }
 

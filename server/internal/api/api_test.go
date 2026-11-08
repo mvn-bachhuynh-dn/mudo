@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -260,5 +261,81 @@ func TestIngestRejectsBrowserRequests(t *testing.T) {
 	}
 	if n := len(st.Snapshot()); n != 1 {
 		t.Fatalf("%d sessions, want 1", n)
+	}
+}
+
+func cswapServer(t *testing.T, run CswapRunner) *httptest.Server {
+	t.Helper()
+	st := store.New(store.Options{Host: "devbox", Now: func() time.Time { return t0 }})
+	srv := httptest.NewServer(Client(st, ClientOptions{
+		Token: "secret", Host: "devbox", Version: "test", Started: t0, Now: func() time.Time { return t0 },
+		PingEvery: time.Second, SubBuffer: 8, Cswap: run,
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestCswapAbsentIs404(t *testing.T) {
+	srv := cswapServer(t, nil)
+	resp := request(t, context.Background(), "GET", srv.URL+"/v1/cswap", "secret")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestCswapRequiresToken(t *testing.T) {
+	srv := cswapServer(t, func(context.Context, ...string) ([]byte, error) { return []byte("{}"), nil })
+	resp := request(t, context.Background(), "GET", srv.URL+"/v1/cswap", "")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status %d, want 401", resp.StatusCode)
+	}
+}
+
+func TestCswapListAndSwitch(t *testing.T) {
+	var calls [][]string
+	srv := cswapServer(t, func(_ context.Context, args ...string) ([]byte, error) {
+		calls = append(calls, args)
+		return []byte(`{"schemaVersion":1,"accounts":[]}`), nil
+	})
+	resp := request(t, context.Background(), "GET", srv.URL+"/v1/cswap", "secret")
+	body := new(strings.Builder)
+	_, _ = bufio.NewReader(resp.Body).WriteTo(body)
+	resp.Body.Close()
+	if resp.StatusCode != 200 || !strings.Contains(body.String(), "schemaVersion") {
+		t.Fatalf("list: %d %q", resp.StatusCode, body.String())
+	}
+	resp = request(t, context.Background(), "POST", srv.URL+"/v1/cswap/switch/4", "secret")
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("switch status %d", resp.StatusCode)
+	}
+	if len(calls) != 2 || strings.Join(calls[0], " ") != "list --json" || strings.Join(calls[1], " ") != "switch 4" {
+		t.Fatalf("calls %v", calls)
+	}
+}
+
+func TestCswapSwitchRejectsNonNumbers(t *testing.T) {
+	ran := false
+	srv := cswapServer(t, func(context.Context, ...string) ([]byte, error) { ran = true; return nil, nil })
+	for _, n := range []string{"abc", "1;rm", "1234", "-1", "a@b.c"} {
+		resp := request(t, context.Background(), "POST", srv.URL+"/v1/cswap/switch/"+n, "secret")
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("%q: status %d", n, resp.StatusCode)
+		}
+	}
+	if ran {
+		t.Fatal("runner called for a bad number")
+	}
+}
+
+func TestCswapFailureIs502(t *testing.T) {
+	srv := cswapServer(t, func(context.Context, ...string) ([]byte, error) { return nil, errors.New("no such account") })
+	resp := request(t, context.Background(), "POST", srv.URL+"/v1/cswap/switch/9", "secret")
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("status %d, want 502", resp.StatusCode)
 	}
 }

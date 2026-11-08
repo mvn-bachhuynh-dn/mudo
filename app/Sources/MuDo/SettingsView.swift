@@ -123,6 +123,9 @@ struct SettingsView: View {
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                 Toggle("Check for updates", isOn: $settings.checkForUpdates)
+                if model.cswap.available {
+                    Toggle("Show Accounts tab (cswap)", isOn: $settings.showAccountsTab)
+                }
             } footer: {
                 Text("MuDo \(model.updater.current)" + (model.updater.notice.map { " · \($0) available" } ?? ""))
                     .font(.caption).foregroundStyle(.secondary)

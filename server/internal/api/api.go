@@ -63,6 +63,8 @@ type ClientOptions struct {
 	Now       func() time.Time
 	PingEvery time.Duration
 	SubBuffer int
+	// Cswap serves /v1/cswap when set (claude-swap installed on this machine); nil = 404.
+	Cswap CswapRunner
 }
 
 // Client serves the token-protected API used by the Mac app.
@@ -87,6 +89,9 @@ func Client(st *store.Store, o ClientOptions) http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
+	if o.Cswap != nil {
+		cswapRoutes(mux, o.Cswap)
+	}
 	mux.HandleFunc("GET /v1/stream", stream(st, o))
 	return requireToken(o.Token, mux)
 }

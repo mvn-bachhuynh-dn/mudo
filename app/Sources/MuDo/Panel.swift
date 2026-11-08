@@ -80,6 +80,8 @@ final class PanelState {
     private(set) var pinned = false
     /// The list shows every idle session instead of the newest `IdleFold.shown`; off again on collapse.
     var showAllIdle = false
+    /// The tab shown in the expanded widget; back to sessions on collapse.
+    var tab: PanelTab = .sessions
     @ObservationIgnored var onSizeChange: ((CGSize) -> Void)?
     /// Called when `isExpanded` goes from true to false.
     @ObservationIgnored var onCollapse: (() -> Void)?
@@ -118,6 +120,7 @@ final class PanelState {
 
     private func collapsed() {
         showAllIdle = false
+        tab = .sessions
         onCollapse?()
     }
 

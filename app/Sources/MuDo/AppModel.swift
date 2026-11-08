@@ -10,6 +10,7 @@ final class AppModel {
     let settings: AppSettings
     let store = SessionStore()
     let localDaemon = LocalDaemon()
+    let cswap = CswapModel()
     let updater: Updater
     private(set) var automationDenied = false
     /// Called when a clicked session's server has no code-server URL to focus.
@@ -42,6 +43,11 @@ final class AppModel {
         updater = Updater(settings: settings)
         focuser.onAutomationDenied = { [weak self] in self?.automationDenied = true }
         focuser.onAutomationAllowed = { [weak self] in self?.automationDenied = false }
+        cswap.servers = { [settings] in
+            settings.servers.filter { !$0.managedLocal }.map { ($0, settings.token(for: $0.id) ?? "") }
+        }
+        // Finds out which servers run cswap, so the Accounts tab can appear without being opened.
+        Task { [cswap] in await cswap.refresh() }
         applySettings()
         startTimer()
         watchWakeAndNetwork()
