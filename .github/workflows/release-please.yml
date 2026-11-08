@@ -50,15 +50,18 @@ jobs:
       - name: Select Xcode 26
         run: sudo xcode-select -s "$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)" && xcodebuild -version
       - run: make -C server app-resource
-      # Sign with the stable self-signed "MuDo Dev" identity so macOS keeps the app's
-      # permissions (Automation, Accessibility) across updates. Ad-hoc when the secrets are unset.
+      # Sign with a stable identity so macOS keeps the app's permissions (Automation,
+      # Accessibility) across updates. Preferred: an Apple Development identity with a Team ID
+      # (MUDO_TEAM_P12 + MUDO_TEAM_P12_PASS): the Keychain then keeps "Always Allow" for the
+      # token across updates. Else the self-signed "MuDo Dev" identity (MUDO_SIGN_P12 +
+      # MUDO_SIGN_P12_PASS). Ad-hoc when no secret is set.
       - name: Import signing identity
         env:
-          P12: ${{ secrets.MUDO_SIGN_P12 }}
-          P12_PASS: ${{ secrets.MUDO_SIGN_P12_PASS }}
+          P12: ${{ secrets.MUDO_TEAM_P12 || secrets.MUDO_SIGN_P12 }}
+          P12_PASS: ${{ secrets.MUDO_TEAM_P12 && secrets.MUDO_TEAM_P12_PASS || secrets.MUDO_SIGN_P12_PASS }}
         run: |
           if [ -z "$P12" ] || [ -z "$P12_PASS" ]; then
-            echo "::warning::MUDO_SIGN_P12 is not set: MuDo.app is signed ad-hoc"
+            echo "::warning::no signing secret is set: MuDo.app is signed ad-hoc"
             echo "SIGN_ID=-" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -72,7 +75,11 @@ jobs:
           rm -f "$RUNNER_TEMP/id.p12"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$kpass" "$kc" > /dev/null
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | xargs)
-          echo "SIGN_ID=MuDo Dev" >> "$GITHUB_ENV"
+          # The identity name comes from the imported certificate ("MuDo Dev" or "Apple Development: ...").
+          id="$(security find-identity -p codesigning "$kc" | sed -n 's/^ *[0-9]*) [0-9A-F]* "\(.*\)".*/\1/p' | head -1)"
+          if [ -z "$id" ]; then echo "::error::no code signing identity in the imported file"; exit 1; fi
+          echo "Signing with: $id"
+          echo "SIGN_ID=$id" >> "$GITHUB_ENV"
           echo "SIGN_KEYCHAIN=$kc" >> "$GITHUB_ENV"
       - run: make -C app test app SIGN_ID="$SIGN_ID" SIGN_KEYCHAIN="$SIGN_KEYCHAIN"
       - name: Show signature
