@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.12.0...v0.13.0) (2026-11-08)
+
+
+### Features
+
+* **app:** Accounts tab for cswap on this Mac and servers, scrolling lists, Team ID signing ([#48](https://github.com/mvn-bachhuynh-dn/mudo/issues/48)) ([53c26e8](https://github.com/mvn-bachhuynh-dn/mudo/commit/53c26e888ad59ee5da6ffb3d4419158a4e8aa540))
+
 ## [0.12.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.11.1...v0.12.0) (2026-11-05)
 
 
