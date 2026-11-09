@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.13.0...v0.14.0) (2026-11-09)
+
+
+### Features
+
+* **mudod:** serve made-up cswap accounts from mudod fake ([#52](https://github.com/mvn-bachhuynh-dn/mudo/issues/52)) ([3a7103a](https://github.com/mvn-bachhuynh-dn/mudo/commit/3a7103a02c747dd87ad0a53d773c6fd6d906bce3))
+
+
+### Documentation
+
+* document the cswap Accounts tab, server support and signing ([#50](https://github.com/mvn-bachhuynh-dn/mudo/issues/50)) ([28f8fae](https://github.com/mvn-bachhuynh-dn/mudo/commit/28f8fae7ba860c2ace98fcac9ee0ea9de216a174))
+
 ## [0.13.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.12.0...v0.13.0) (2026-11-08)
 
 
