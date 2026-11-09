@@ -4,7 +4,7 @@
 #   scripts/demo        start (MuDo Demo + fake mudod on 127.0.0.1:7881)
 #   scripts/demo stop   quit both and remove the demo copy, settings and token
 set -euo pipefail
-src=/Applications/MuDo.app
+src="${MUDO_APP:-/Applications/MuDo.app}"   # MUDO_APP=path to try a build that is not installed
 demo="$HOME/Library/Caches/MuDo Demo.app"
 id=dev.steve.MuDo.demo
 addr=127.0.0.1:7881
@@ -33,6 +33,8 @@ cp -R "$src" "$demo"
 	-c "Set :CFBundleName MuDo Demo" "$demo/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$demo/Contents/Info.plist" 2>/dev/null || true
 codesign --force --sign - "$demo" 2>/dev/null
+# The fake mudod serves made-up cswap accounts; keep this Mac's real ones out of the picture.
+defaults write "$id" cswapLocal -bool false
 
 open "$demo"
 sleep 2

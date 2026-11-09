@@ -101,6 +101,8 @@ Hook errors are logged to `~/.local/state/mudo/hook.log`. Set `MUDO_HOOK_DUMP=1`
 mudod fake --addr 0.0.0.0:7879 --token fake-token --step 3s
 ```
 
+It also answers `/v1/cswap` with made-up accounts (placeholder addresses), and `POST /v1/cswap/switch/{number}` moves the active one, so the app's Accounts tab works against it.
+
 ## Uninstall
 
 ```bash

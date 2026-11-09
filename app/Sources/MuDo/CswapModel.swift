@@ -46,6 +46,12 @@ final class CswapModel {
 
     /// Looks for `cswap` in the fixed install locations (the app has no login-shell PATH).
     func locate() {
+        // Hidden switch for screenshots: `scripts/demo` turns it off so the Mac's real account
+        // list never appears next to the fake server's.
+        guard UserDefaults.standard.object(forKey: "cswapLocal") as? Bool ?? true else {
+            binary = nil
+            return
+        }
         binary = CswapPaths.firstExecutable(home: NSHomeDirectory()) {
             FileManager.default.isExecutableFile(atPath: $0)
         }
