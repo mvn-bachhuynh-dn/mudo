@@ -12,11 +12,22 @@ Needs macOS 26 and Xcode 26 (or its command line tools).
 
 ```bash
 make test      # MuDoCore unit tests
-make app       # build/MuDo.app, signed with "MuDo Dev" if present, else ad-hoc
+make app       # build/MuDo.app, signed with an Apple Development identity if there is one,
+               # else "MuDo Dev" if present, else ad-hoc
 make install   # copy to /Applications and launch
 ```
 
-### Stable signing identity (one time)
+### Signing identity
+
+`make app` picks the first of these (override with `SIGN_ID=...`):
+
+1. A valid **Apple Development** identity in your keychains. It carries a Team ID, so the Keychain keeps "Always Allow" for the server token across rebuilds and updates: macOS identifies the app by Team ID, not by each build's code hash. Sign from a terminal on the Mac, not over SSH: the login keychain is locked there and `codesign` fails with `errSecInternalComponent`. The first build asks once for `codesign` to use the key (Always Allow).
+2. The self-signed **"MuDo Dev"** identity from `scripts/make-signing-identity` (below). Same designated requirement for every build, which keeps Automation and Accessibility grants, but it has no Team ID, so the Keychain asks again for every new build (`securityd` logs `ACL partition mismatch`).
+3. Ad-hoc (`-`).
+
+The release workflow signs the same way: `MUDO_TEAM_P12` first, then `MUDO_SIGN_P12` (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+
+#### Self-signed identity (one time)
 
 Run once on the build Mac:
 
@@ -45,5 +56,6 @@ Settings → This Mac → **Monitor this Mac** runs the bundled `mudod install -
 - Local and SSH sessions: Automation for iTerm2, Terminal, Ghostty and System Events, and Accessibility for raising VS Code / Cursor / Windsurf / VSCodium / Kiro windows. Each is asked once; a denial is logged under the `focus` category and the click only activates the app.
 - First click on a session asks for Automation access to Google Chrome. If denied, MuDo opens a new Chrome window instead, and the menu shows "Allow MuDo to control Chrome…".
 - Tokens are stored in the Keychain and read once per server per launch (then cached in memory).
-- With an ad-hoc signature (no "MuDo Dev" identity), each rebuild changes the signature, so macOS asks again for Keychain access and for Automation access to Google Chrome. Run `scripts/make-signing-identity` once to stop that.
+- With an ad-hoc signature, each rebuild changes the signature, so macOS asks again for Keychain access and for Automation access to Google Chrome. Run `scripts/make-signing-identity` once to stop the Automation prompts; to stop the Keychain prompts too, sign with an Apple Development identity (see "Signing identity" above).
+- Accounts tab (cswap): the app runs `cswap` only from `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`, without a shell, and reaches a server's `cswap` only through that server's `mudod` (`/v1/cswap`, bearer token). Switching changes which Claude account new sessions use on that machine.
 - If the server has no code-server URL (link printed without `--code-server` and the Settings field empty), clicking a session has no Chrome window to focus and MuDo opens Settings instead. For devbox: `mudod install --code-server https://code.example.com`.

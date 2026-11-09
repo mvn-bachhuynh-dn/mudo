@@ -20,6 +20,7 @@ MuDo is a small always-on-top widget for macOS. Run a few coding agents in paral
 - Works on the Mac alone. Agents running on remote Linux servers (over SSH, tmux or code-server) can be added later.
 - No cloud, no account, no telemetry: agent hooks report to a small local daemon, `mudod`, and the app reads it.
 - Claude Code and Kiro CLI, in iTerm2, Terminal.app, Ghostty, VS Code / Cursor / Windsurf / Kiro IDE, and tmux.
+- Optional [claude-swap](https://pypi.org/project/claude-swap/) (`cswap`) integration: an **Accounts** tab shows each Claude account's 5 h and 7 d usage and switches the active account with a click, on this Mac and on your servers. See [Accounts tab](#accounts-tab-cswap).
 
 ## Quick start
 
@@ -123,6 +124,7 @@ The agent only runs what the README describes; anything with `sudo`, the firewal
 - Linux (amd64 or arm64) with a systemd user session (lingering enabled so the daemon survives logout).
 - Claude Code and/or `kiro-cli`.
 - Optional: code-server opened in Google Chrome, one window per project, so clicking a session can focus it.
+- Optional: [claude-swap](https://pypi.org/project/claude-swap/) (`cswap`) for the daemon's user, to list and switch Claude accounts from the widget. `mudod` 0.13.0 or later; it looks in `~/.local/bin`, `/usr/local/bin` and `/opt/homebrew/bin` only.
 
 **Mac**
 
@@ -261,7 +263,16 @@ A denied permission is logged and the click falls back to activating the app.
 
 ### Accounts tab (cswap)
 
-If [claude-swap](https://pypi.org/project/claude-swap/) is installed on the Mac (`cswap` in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`), the expanded widget gets a **Sessions | Accounts** switch. Accounts lists what `cswap list --json` reports: the active account (check mark), the 5 h and 7 d usage bars (green under 70 %, orange from 70 %, red from 90 %), model-scoped limits such as Fable, and the reset countdown. Click an inactive account to run `cswap switch <number>`; a switch applies to new Claude Code sessions, running ones keep their account. An account that needs a new login is not clickable, and a reading older than the live one is dimmed. The list refreshes when the tab opens and every minute while it is shown. Turn the tab off with "Show Accounts tab (cswap)" in Settings. Adding, removing and tuning accounts stays in the `cswap` CLI.
+MuDo can show and switch the Claude accounts managed by [claude-swap](https://pypi.org/project/claude-swap/) (`cswap`). The expanded widget then gets a **Sessions | Accounts** switch; without `cswap` the widget looks as before.
+
+- **One machine at a time.** `cswap` keeps its own account list on each machine, so the Mac and every server are separate sources. With more than one source, a picker at the top of the tab chooses between **This Mac** and each server name, and a line under it says which machine a click will switch on. They are never merged into one list.
+- **What a row shows.** The active account (check mark), the 5 h and 7 d usage bars (green under 70 %, orange from 70 %, red from 90 %), model-scoped limits such as Fable, and the reset countdown. An account's alias is its title, else its email.
+- **Switching.** Click an inactive account to run `cswap switch <number>` on that machine, then the list refreshes. A switch applies to new Claude Code sessions; running ones keep their account. An account that needs a new login is not clickable (log in with Claude Code, then run `cswap add`), and a reading older than the live one is dimmed.
+- **Refresh.** When the tab opens and every minute while it is shown. Long lists scroll.
+- **Where `cswap` must be.** On the Mac: `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin` (the app has no login-shell `PATH`, so nothing else is searched). On a server: for the daemon's user, same folders, with `mudod` 0.13.0 or later; the daemon serves `GET /v1/cswap` and `POST /v1/cswap/switch/{number}` behind its token (see [server/README.md](server/README.md#cswap-claude-swap-accounts)). A server without `cswap`, or with an older `mudod`, is simply left out of the picker.
+- **Off switch.** "Show Accounts tab (cswap)" in Settings (shown when `cswap` is found on this Mac or on a server). The tab also appears when only a server has `cswap`.
+
+Adding, removing and tuning accounts stays in the `cswap` CLI.
 
 ### Click targets
 
@@ -295,6 +306,7 @@ When exactly one plain `ssh` to that server is open, a click may land on that ta
 - Servers: name, daemon URL, code-server URL, token (stored in the Keychain); Save / Remove; paste a `mudo://add` link to add one. **Test** checks the values in the fields (saved or not): the daemon answers `/v1/health` and accepts the token, and the code-server URL answers HTTP.
 - Alerts: Blink after N min, Snooze for N min, Auto-acknowledge when already in view (default on).
 - Hidden sessions: one folder pattern per line, `*` matches anything (including `/`), matched against the full session folder. Defaults: `*/kirocrew-workspace/_bg*`, `/tmp/*`.
+- Accounts tab: "Show Accounts tab (cswap)" (default on; shown only when `cswap` is found on this Mac or on a server).
 - Launch at login.
 
 ## Troubleshooting
