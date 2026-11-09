@@ -390,7 +390,9 @@ UI work without real agents: run a fake server that cycles scripted sessions thr
 mudod fake --addr 0.0.0.0:7879 --token fake-token --step 3s
 ```
 
-Screenshots for the docs: `app/scripts/demo` (on the Mac) runs a separate `MuDo Demo` copy against a fake `mudod` on `127.0.0.1:7881`, leaving the real app's servers alone; `app/scripts/demo stop` removes it.
+The fake server also serves made-up cswap accounts (placeholder `@example.com` addresses; five accounts, one that needs a new login, one without usage), so the Accounts tab can be tried without real accounts. `cswap switch` on them works: the check mark moves.
+
+Screenshots for the docs: `app/scripts/demo` (on the Mac) runs a separate `MuDo Demo` copy against a fake `mudod` on `127.0.0.1:7881`, leaving the real app's servers alone; `app/scripts/demo stop` removes it. The demo copy ignores the Mac's own `cswap` (the hidden `cswapLocal` default is off for it), so a real account list never shows up in a screenshot. `MUDO_APP=<path to MuDo.app> app/scripts/demo` runs a build that is not installed.
 
 More detail: [server/README.md](server/README.md), [app/README.md](app/README.md).
 

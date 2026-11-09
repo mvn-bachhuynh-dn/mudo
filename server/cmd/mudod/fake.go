@@ -35,7 +35,7 @@ func runFake(args []string) error {
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 		Handler: api.Client(st, api.ClientOptions{
 			Token: *token, Host: "fake", Version: version, Started: time.Now(), Now: time.Now,
-			PingEvery: 15 * time.Second, SubBuffer: 64,
+			PingEvery: 15 * time.Second, SubBuffer: 64, Cswap: fake.Cswap(),
 		}),
 	}
 	go func() {
