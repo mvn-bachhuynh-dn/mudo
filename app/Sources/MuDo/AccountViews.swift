@@ -24,8 +24,24 @@ struct AccountListView: View {
                 .controlSize(.small)
             }
             if let source = cswap.current {
-                Text("Switching here changes cswap on \(source.name)")
-                    .font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 6)
+                HStack(spacing: 4) {
+                    Text("Switching here changes cswap on \(source.name)")
+                        .font(.caption2).foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    // Manual refresh: the list otherwise updates only on open and every minute.
+                    if cswap.loading {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Button { Task { await cswap.refresh() } } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .controlSize(.small)
+                        .disabled(cswap.switching != nil)
+                        .help("Refresh accounts")
+                    }
+                }
+                .padding(.horizontal, 6)
                 // The widget is not taller than the screen: the list scrolls.
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: 2) {
