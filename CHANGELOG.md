@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.14.0...v0.15.0) (2026-11-17)
+
+
+### Features
+
+* **app:** refresh button on the Accounts tab ([#54](https://github.com/mvn-bachhuynh-dn/mudo/issues/54)) ([dc31a0c](https://github.com/mvn-bachhuynh-dn/mudo/commit/dc31a0cbc2fa5f8b4400ee5a239ad63e99b9cbcf))
+
 ## [0.14.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.13.0...v0.14.0) (2026-11-09)
 
 
