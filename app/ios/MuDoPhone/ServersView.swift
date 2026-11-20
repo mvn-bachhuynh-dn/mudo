@@ -81,7 +81,10 @@ struct AddServerView: View {
                     TextField("Name", text: $name)
                     TextField("http://100.64.0.10:7879", text: $url)
                         .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    // A server token is not a password: oneTimeCode keeps iOS from offering to save it.
                     SecureField("Token", text: $token)
+                        .textContentType(.oneTimeCode)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
                 }
                 if let error { Text(error).foregroundStyle(.red).font(.footnote) }
             }
