@@ -27,7 +27,7 @@ Three tabs: **Sessions | Accounts | Servers**.
 - `MuDoCore/CswapClient.swift` (new, tested): the HTTP part of `CswapModel` moved down (`GET /v1/cswap`, `POST /v1/cswap/switch/{number}`, status code to error mapping: 200/204 ok, 404 not available, 401 "token invalid", other: first line of the body). The number stays an `Int`. The Mac `CswapModel` calls it, so there is one implementation.
 - `ios/`: Xcode project `MuDoPhone` (SwiftUI app target) depending on the local `MuDoCore` package. Files: `PhoneModel` (`@Observable`: servers, one `ServerConnection` per server, one shared `SessionStore`), `SessionsView`, `AccountsView`, `ServersView`, `KeychainStore`. The team and bundle id are set by the user in Xcode (free Apple ID); no signing identity is committed.
 - **Connections.** When the scene becomes active: connect every server (backoff as on the Mac, snapshot on connect). When it goes to the background: cancel all. Cswap reloads happen on tab open, pull to refresh, every 60 s while visible, and after a switch.
-- **App Transport Security.** `mudod` is plain HTTP. `Info.plist` starts with `NSAllowsLocalNetworking`. It is **not yet known** whether that covers Tailscale addresses (`100.64.0.0/10`, `fd7a:…`). It is tested in the Simulator against a fake `mudod`; if it does not, the app uses `NSAllowsArbitraryLoads`, as the Mac app already does, and the README says so. `NSLocalNetworkUsageDescription` is set.
+- **App Transport Security.** `mudod` is plain HTTP, so `Info.plist` sets `NSAllowsArbitraryLoads`, the same as the Mac app. `NSAllowsLocalNetworking` could not be tested against Tailscale addresses (`100.64.0.0/10`, `fd7a:…`) and does not cover MagicDNS names, so it is not used. The access control is `mudod`'s token-protected API, and the app sends a token only to servers the user added. `NSLocalNetworkUsageDescription` is set.
 - URL scheme `mudo` registered for the add link.
 
 ## Errors
@@ -40,8 +40,8 @@ Three tabs: **Sessions | Accounts | Servers**.
 ## Testing
 
 - Unit tests in `MuDoCoreTests` for `CswapClient` (fake `URLProtocol`: 200, 204, 401, 404, 5xx, timeout, request path and headers) and for any logic moved down. They fail without the change. Run with `app/scripts/docker-test` or `on-mac`.
-- The iOS target is built for the Simulator on a Mac (`MUDO_MAC=<ssh host> app/scripts/on-mac`), against the fake `mudod` (`mudod` fake mode serves made-up sessions and cswap accounts). Screenshots of the three tabs come from this, never from a real setup.
-- Not verifiable from Linux: any iOS build. If no Mac is reachable the PR says the iOS target was not compiled. Installing on a real iPhone is done by the owner from Xcode.
+- The iOS target is verified by the GitHub CI compile (`make -C app ios-core ios-app` on a macOS runner). The build Mac was offline during development, so the first run in the Simulator (against the fake `mudod`, which serves made-up sessions and cswap accounts) and on a real iPhone still has to be done by the owner. Screenshots, if any, come from the fake `mudod`, never from a real setup.
+- Not verifiable from Linux: any iOS build. Installing on a real iPhone is done by the owner from Xcode.
 - Public repo rules apply: no real addresses, tokens or hostnames in code, tests, docs or screenshots (`100.64.0.10`, `fd7a:115c:a1e0::10`, `devbox` only).
 
 ## Docs

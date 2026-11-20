@@ -30,7 +30,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSLocalNetworkUsageDescription: MuDo connects to mudod on your servers to show agent sessions.
         NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
         CFBundleURLTypes:
           - CFBundleURLName: dev.steve.MuDoPhone.add
             CFBundleURLSchemes: [mudo]
