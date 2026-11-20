@@ -1,4 +1,8 @@
+#if canImport(CoreGraphics)
 import CoreGraphics
+#else
+import Foundation
+#endif
 
 /// When a press on the widget becomes a drag of the widget rather than a click.
 public enum PanelDrag {

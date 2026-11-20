@@ -8,3 +8,6 @@ DerivedData/
 .claude/settings.local.json
 app/.build/
 app/Resources/mudod
+app/ios/MuDoPhone.xcodeproj/
+app/ios/.tools/
+app/ios/MuDoPhone/Info.plist

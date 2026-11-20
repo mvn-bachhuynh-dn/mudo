@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Downloads a pinned XcodeGen into app/ios/.tools and runs it. Usage: scripts/xcodegen
+set -euo pipefail
+VERSION="2.48.0"
+SHA256="620c9f0dc10849f94728ab5df52d225ebab8187439dd6fee1925e59e80dff892"
+here="$(cd "$(dirname "$0")/.." && pwd)"
+dir="$here/.tools/xcodegen-$VERSION"
+bin="$dir/xcodegen/bin/xcodegen"
+if [ ! -x "$bin" ]; then
+  mkdir -p "$dir"
+  curl -fsSL "https://github.com/yonaskolb/XcodeGen/releases/download/$VERSION/xcodegen.zip" -o "$dir/xcodegen.zip"
+  echo "$SHA256  $dir/xcodegen.zip" | shasum -a 256 -c -
+  unzip -q -o "$dir/xcodegen.zip" -d "$dir"
+fi
+cd "$here" && exec "$bin" generate

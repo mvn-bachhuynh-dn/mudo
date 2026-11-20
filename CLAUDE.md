@@ -14,6 +14,14 @@ This repository is public. Never commit real IP addresses, hostnames, domains, t
 - The app bundles the darwin mudod: run `make -C server app-resource` before `make -C app app`.
 - Darwin-only live checks: `make -C server test-darwin-live MUDO_MAC=<ssh host>`.
 
+## iPhone app
+
+- Lives in `app/ios` (XcodeGen source: `app/ios/project.yml`). The generated `.xcodeproj` is git-ignored; never commit it. No signing identity or team is committed.
+- `MuDoCore` must stay buildable for Linux and iOS: no UIKit, AppKit or Security there. Keep logic in `MuDoCore`, UI in `app/ios`.
+- Verify: `app/scripts/docker-test` on Linux. `make -C app ios-core ios-app` needs macOS and Xcode; CI covers both on `macos-26`.
+- Running it needs a Mac with Simulator or a device. A free Apple ID must re-sign every 7 days.
+- Spec: `docs/superpowers/specs/2026-11-20-iphone-app-design.md`; plan: `docs/superpowers/plans/2026-11-20-iphone-app.md`.
+
 ## Rules for code and tests
 
 - Tests never touch the real `$HOME`, `~/.claude`, `~/.kiro`, `~/.config`, `systemctl` or `launchctl`; inject paths and runners. Do not run `mudod install`/`uninstall` against a real machine unless the user asks.

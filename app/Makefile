@@ -20,7 +20,7 @@ SIGN_ID := $(shell security find-identity -p codesigning $(wildcard $(SIGN_KEYCH
 endif
 endif
 
-.PHONY: test build app run install clean
+.PHONY: test build app run install clean ios-core ios-app
 
 test:
 	swift test
@@ -41,6 +41,13 @@ app: build
 		security unlock-keychain -p "$$(cat "$(SIGN_PASS)")" "$(SIGN_KEYCHAIN)"; fi
 	codesign --force --options runtime --sign "$(SIGN_ID)" $(if $(and $(SIGN_KEYCHAIN),$(filter-out -,$(SIGN_ID))),--keychain "$(SIGN_KEYCHAIN)") $(APP)/Contents/Resources/mudod
 	codesign --force --sign "$(SIGN_ID)" $(if $(and $(SIGN_KEYCHAIN),$(filter-out -,$(SIGN_ID))),--keychain "$(SIGN_KEYCHAIN)") $(APP)
+
+ios-core:
+	xcodebuild build -scheme MuDoCore -destination 'generic/platform=iOS Simulator' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
+
+ios-app:
+	ios/scripts/xcodegen
+	xcodebuild build -project ios/MuDoPhone.xcodeproj -scheme MuDoPhone -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
 
 run: app
 	open $(APP)

@@ -21,6 +21,7 @@ MuDo is a small always-on-top widget for macOS. Run a few coding agents in paral
 - No cloud, no account, no telemetry: agent hooks report to a small local daemon, `mudod`, and the app reads it.
 - Claude Code and Kiro CLI, in iTerm2, Terminal.app, Ghostty, VS Code / Cursor / Windsurf / Kiro IDE, and tmux.
 - Optional [claude-swap](https://pypi.org/project/claude-swap/) (`cswap`) integration: an **Accounts** tab shows each Claude account's 5 h and 7 d usage and switches the active account with a click, on this Mac and on your servers. See [Accounts tab](#accounts-tab-cswap).
+- Optional iPhone app (build from source): sessions of all your servers and the cswap accounts, over Tailscale. See [iPhone app](#iphone-app).
 
 ## Quick start
 
@@ -273,6 +274,16 @@ MuDo can show and switch the Claude accounts managed by [claude-swap](https://py
 - **Off switch.** "Show Accounts tab (cswap)" in Settings (shown when `cswap` is found on this Mac or on a server). The tab also appears when only a server has `cswap`.
 
 Adding, removing and tuning accounts stays in the `cswap` CLI.
+
+### iPhone app
+
+A small iPhone app shows the sessions of all your servers and, with `cswap`, the Claude accounts of each server, with a confirmation before it switches one. It is read from the same `mudod` API as the Mac app.
+
+- **Needs.** Tailscale on the iPhone, and `mudod` 0.13.0 or later on a server for the Accounts tab.
+- **Install.** It is not on the App Store: build it from source with Xcode and a free Apple ID. Run `app/ios/scripts/xcodegen` (the pinned XcodeGen; enough to open the project), then open `app/ios/MuDoPhone.xcodeproj` and run it on the device. `make -C app ios-app` does the same and also compiles for the Simulator (`CODE_SIGNING_ALLOWED=NO`). Every run regenerates the project, so a team and bundle id set in Xcode are lost: set `DEVELOPMENT_TEAM` and a unique `PRODUCT_BUNDLE_IDENTIFIER` in `app/ios/project.yml` locally and do not commit them. With a free Apple ID the app must be re-signed every 7 days.
+- **Add a server.** Paste the `mudo://add?...` link printed by `mudod install`, or fill in the URL and the token. The URL looks like `http://100.64.0.10:7879`.
+- **Limits.** No notifications or push. Live updates (SSE) only run while the app is open. No tap-to-focus, and no "This Mac". `cswap` accounts are added and removed with the CLI.
+- **Security.** The connection is plain HTTP over Tailscale (the app allows it for this reason). The token is kept in the iPhone Keychain and is only sent to servers you added.
 
 ### Click targets
 

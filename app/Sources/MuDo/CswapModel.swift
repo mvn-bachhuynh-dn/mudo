@@ -3,16 +3,6 @@ import MuDoCore
 import Observation
 import os
 
-/// Where a list of cswap accounts lives: cswap keeps its own accounts per machine, so the Mac
-/// and each mudod server that has cswap installed are separate sources.
-struct CswapSource: Identifiable, Equatable {
-    /// "local" or the server's UUID.
-    var id: String
-    var name: String
-    var accounts: [CswapAccount] = []
-    var error: String?
-}
-
 /// Runs `cswap` (claude-swap) on this Mac and, through mudod's `/v1/cswap`, on each server,
 /// and holds the account lists for the Accounts tab.
 @MainActor
@@ -28,6 +18,7 @@ final class CswapModel {
     /// Supplies the remote servers (not the managed local one) and their tokens.
     @ObservationIgnored var servers: () -> [(config: ServerConfig, token: String)] = { [] }
 
+    @ObservationIgnored private let client = CswapClient()
     @ObservationIgnored private static let log = Logger(subsystem: "dev.steve.MuDo", category: "cswap")
 
     init() { locate() }
@@ -77,22 +68,7 @@ final class CswapModel {
             }
             next.append(source)
         }
-        for (config, token) in servers() {
-            var source = CswapSource(id: config.id.uuidString, name: config.name)
-            switch await Self.remote(config.daemonURL, token: token, path: "v1/cswap", method: "GET") {
-            case .success(let data):
-                do {
-                    source.accounts = try CswapList.parse(data).accounts
-                } catch {
-                    source.error = "Unexpected cswap output"
-                }
-            case .failure(.notInstalled):
-                continue  // an older mudod, or no cswap on that server
-            case .failure(let e):
-                source.error = e.message
-            }
-            next.append(source)
-        }
+        next += await CswapSources.loadRemote(servers: servers(), client: client)
         sources = next
         if !next.contains(where: { $0.id == selectedSource }), let first = next.first {
             selectedSource = first.id
@@ -112,8 +88,7 @@ final class CswapModel {
                 }
             }
         } else if let entry = servers().first(where: { $0.config.id.uuidString == source.id }) {
-            let path = "v1/cswap/switch/\(account.number)"
-            if case .failure(let e) = await Self.remote(entry.config.daemonURL, token: entry.token, path: path, method: "POST") {
+            if case .failure(let e) = await client.switchTo(account.number, daemon: entry.config.daemonURL, token: entry.token) {
                 failure = e.message
             }
         }
@@ -123,42 +98,6 @@ final class CswapModel {
         await refresh()
         if let failure, let i = sources.firstIndex(where: { $0.id == source.id }) {
             sources[i].error = failure
-        }
-    }
-
-    // MARK: - Remote (mudod)
-
-    private enum RemoteFailure: Error {
-        case notInstalled
-        case other(String)
-
-        var message: String {
-            switch self {
-            case .notInstalled: "cswap not available"
-            case .other(let m): m
-            }
-        }
-    }
-
-    private nonisolated static func remote(_ daemon: URL, token: String, path: String, method: String)
-        async -> Result<Data, RemoteFailure> {
-        var request = URLRequest(url: daemon.appending(path: path))
-        request.httpMethod = method
-        request.timeoutInterval = 25
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        do {
-            let (body, response) = try await URLSession.shared.data(for: request)
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            switch code {
-            case 200, 204: return .success(body)
-            case 404: return .failure(.notInstalled)
-            case 401: return .failure(.other("token invalid"))
-            default:
-                let text = String(decoding: body, as: UTF8.self)
-                return .failure(.other(CswapCommand.errorLine(text.isEmpty ? "HTTP \(code)" : text)))
-            }
-        } catch {
-            return .failure(.other(error.localizedDescription))
         }
     }
 
