@@ -28,7 +28,10 @@ final class PhoneCswap {
         defer { loading = false }
         repeat {
             refreshAgain = false
-            sources = await CswapSources.loadRemote(servers: servers(), client: client)
+            let loaded = await CswapSources.loadRemote(servers: servers(), client: client)
+            // Leaving the tab cancels the fetch; its failures are not a result.
+            if Task.isCancelled { break }
+            sources = loaded
             if !sources.contains(where: { $0.id == selectedID }), let first = sources.first {
                 selectedID = first.id
             }

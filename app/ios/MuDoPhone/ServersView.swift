@@ -33,6 +33,7 @@ struct ServersView: View {
             .navigationTitle("Servers")
             .toolbar { Button { showingAdd = true } label: { Image(systemName: "plus") } }
             .sheet(isPresented: $showingAdd) { AddServerView(model: model) }
+            .onChange(of: model.pendingDraft != nil) { _, has in if has { showingAdd = false } }
             .sheet(item: $model.pendingDraft) { draft in AddServerView(model: model, draft: draft) }
         }
     }
@@ -93,8 +94,11 @@ struct AddServerView: View {
                         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !trimmed.isEmpty else { error = "The token is empty"; return }
                         let host = URLComponents(url: daemon, resolvingAgainstBaseURL: false)?.host ?? "server"
-                        model.add(ServerDraft(name: name.isEmpty ? host : name, daemonURL: daemon, token: trimmed, codeServerURL: nil))
-                        dismiss()
+                        if model.add(ServerDraft(name: name.isEmpty ? host : name, daemonURL: daemon, token: trimmed, codeServerURL: nil)) {
+                            dismiss()
+                        } else {
+                            error = "Could not save the token to the Keychain"
+                        }
                     }
                 }
             }

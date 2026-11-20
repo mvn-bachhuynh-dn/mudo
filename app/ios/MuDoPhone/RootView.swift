@@ -18,6 +18,7 @@ struct RootView: View {
         }
         .onChange(of: model.servers) { _, _ in Task { await cswap.refresh() } }
         .onChange(of: cswap.sources.isEmpty) { _, empty in if empty && tab == "accounts" { tab = "sessions" } }
+        .onChange(of: model.pendingDraft != nil) { _, has in if has { tab = "servers" } }
         .onAppear { if model.servers.isEmpty { tab = "servers" } }
     }
 }

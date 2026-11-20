@@ -31,14 +31,28 @@ final class PhoneModel {
         servers.map { ($0, token(for: $0.id)) }
     }
 
-    func add(_ draft: ServerDraft) {
-        guard !servers.contains(where: { $0.daemonURL == draft.daemonURL }) else { return }
+    /// Adds a server, or updates the name and token of the one with the same address.
+    /// Returns false when the token could not be saved to the Keychain.
+    @discardableResult
+    func add(_ draft: ServerDraft) -> Bool {
+        if let i = servers.firstIndex(where: { $0.daemonURL == draft.daemonURL }) {
+            let id = servers[i].id
+            guard KeychainStore.write(draft.token, account: id.uuidString) else { return false }
+            servers[i].name = draft.name
+            if let cs = draft.codeServerURL { servers[i].codeServerURL = cs }
+            connections[id]?.stop()
+            connections[id] = nil
+            persist()
+            if active { connect(servers[i]) }
+            return true
+        }
         let config = ServerConfig(id: UUID(), name: draft.name, daemonURL: draft.daemonURL,
                                   codeServerURL: draft.codeServerURL)
-        guard KeychainStore.write(draft.token, account: config.id.uuidString) else { return }
+        guard KeychainStore.write(draft.token, account: config.id.uuidString) else { return false }
         servers.append(config)
         persist()
         if active { connect(config) }
+        return true
     }
 
     func remove(_ id: UUID) {
@@ -53,8 +67,8 @@ final class PhoneModel {
     func setActive(_ on: Bool) {
         active = on
         if on {
-            for config in servers where connections[config.id] == nil { connect(config) }
             for connection in connections.values { connection.reconnectNow() }
+            for config in servers where connections[config.id] == nil { connect(config) }
         } else {
             for connection in connections.values { connection.stop() }
             connections = [:]

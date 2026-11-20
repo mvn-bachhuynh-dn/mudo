@@ -3,7 +3,13 @@ import SwiftUI
 
 struct AccountsView: View {
     @Bindable var cswap: PhoneCswap
-    @State private var confirming: CswapAccount?
+    @State private var confirming: Pending?
+
+    private struct Pending: Identifiable {
+        let source: CswapSource
+        let account: CswapAccount
+        var id: String { "\(source.id)/\(account.number)" }
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,8 +29,9 @@ struct AccountsView: View {
                     ForEach(source.accounts) { account in
                         AccountRow(account: account, busy: cswap.switching == "\(source.id)/\(account.number)")
                             .contentShape(Rectangle())
+                            .accessibilityAddTraits(.isButton)
                             .onTapGesture {
-                                if CswapRowModel(account).switchable, cswap.switching == nil { confirming = account }
+                                if CswapRowModel(account).switchable, cswap.switching == nil { confirming = Pending(source: source, account: account) }
                             }
                     }
                 }
@@ -39,13 +46,11 @@ struct AccountsView: View {
                 }
             }
             .alert("Switch account?", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-                   presenting: confirming) { account in
-                Button("Switch") {
-                    if let source = cswap.current { Task { await cswap.switchTo(account, in: source) } }
-                }
+                   presenting: confirming) { pending in
+                Button("Switch") { Task { await cswap.switchTo(pending.account, in: pending.source) } }
                 Button("Cancel", role: .cancel) {}
-            } message: { account in
-                Text("Use \(CswapRowModel(account).title) on \(cswap.current?.name ?? "this server"). New Claude Code sessions use it; running ones keep their account.")
+            } message: { pending in
+                Text("Use \(CswapRowModel(pending.account).title) on \(pending.source.name). New Claude Code sessions use it; running ones keep their account.")
             }
         }
     }

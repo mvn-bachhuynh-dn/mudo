@@ -17,8 +17,13 @@ struct MuDoPhoneApp: App {
             RootView(model: model, cswap: cswap)
                 .onOpenURL { model.handle(url: $0) }
                 .onChange(of: scenePhase, initial: true) { _, phase in
-                    model.setActive(phase == .active)
-                    if phase == .active { Task { await cswap.refresh() } }
+                    // .inactive (Notification Center, app switcher) keeps the connections.
+                    if phase == .active {
+                        model.setActive(true)
+                        Task { await cswap.refresh() }
+                    } else if phase == .background {
+                        model.setActive(false)
+                    }
                 }
         }
     }
