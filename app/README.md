@@ -41,6 +41,24 @@ After the first launch with the new signature, click "Always Allow" once on the 
 
 From the Linux server, `scripts/on-mac '<command>'` syncs `app/` to the Mac set in `MUDO_MAC=user@host` and runs the command there.
 
+## iPhone app
+
+Layout: `ios/` holds the iPhone app (SwiftUI, generated with XcodeGen from `ios/project.yml`); `MuDoCore` is shared with the Mac app and must build on Linux and iOS (no UIKit, AppKit or Security there).
+
+```bash
+make -C app ios-core     # MuDoCore for iOS (needs macOS and Xcode)
+make -C app ios-app      # generate the project and build the app for the Simulator
+app/scripts/docker-test  # MuDoCore tests on Linux
+```
+
+The generated `ios/MuDoPhone.xcodeproj` is git-ignored. For a Simulator run without a real setup, start the fake server and add `http://127.0.0.1:7881` in the app:
+
+```bash
+mudod fake --addr 127.0.0.1:7881 --token fake-token --step 3s
+```
+
+CI builds both the Mac and the iOS targets on `macos-26`. User-facing steps (install, free Apple ID re-signing): see the [top-level README](../README.md#iphone-app).
+
 ## Add a server
 
 Run `mudod install --code-server <url>` on the server, then open the printed `mudo://add?...` link on the Mac (or paste it in Settings). Without `--code-server`, fill "code-server URL" in Settings so that clicking a session can focus its Chrome window.
