@@ -38,3 +38,4 @@ jobs:
       - run: make -C server app-resource
       - run: make -C app test app SIGN_ID=-
       - run: make -C app ios-core
+      - run: make -C app ios-app

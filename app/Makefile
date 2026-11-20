@@ -20,7 +20,7 @@ SIGN_ID := $(shell security find-identity -p codesigning $(wildcard $(SIGN_KEYCH
 endif
 endif
 
-.PHONY: test build app run install clean ios-core
+.PHONY: test build app run install clean ios-core ios-app
 
 test:
 	swift test
@@ -44,6 +44,10 @@ app: build
 
 ios-core:
 	xcodebuild build -scheme MuDoCore -destination 'generic/platform=iOS Simulator' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
+
+ios-app:
+	ios/scripts/xcodegen
+	xcodebuild build -project ios/MuDoPhone.xcodeproj -scheme MuDoPhone -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
 
 run: app
 	open $(APP)
