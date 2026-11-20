@@ -5,7 +5,8 @@ import FoundationNetworking
 #endif
 @testable import MuDoCore
 
-@Suite(.serialized) struct CswapClientTests {
+extension StubHTTPTests {
+@Suite struct CswapClientTests {
     private let daemon = URL(string: "http://100.64.0.10:7879")!
     private let listJSON = Data("""
     {"schemaVersion":1,"activeAccountNumber":2,"accounts":[
@@ -92,4 +93,5 @@ import FoundationNetworking
         }
         #expect(failure == .message("no such account"))
     }
+}
 }

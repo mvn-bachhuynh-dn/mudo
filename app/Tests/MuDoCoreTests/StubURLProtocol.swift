@@ -1,4 +1,5 @@
 import Foundation
+import Testing
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -43,3 +44,7 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
 
     override func stopLoading() {}
 }
+
+/// Parent of every suite that uses `StubURLProtocol`: its handler is process-global, so these
+/// suites must not run in parallel with each other.
+@Suite(.serialized) enum StubHTTPTests {}
