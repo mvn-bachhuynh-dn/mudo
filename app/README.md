@@ -51,7 +51,7 @@ make -C app ios-app      # generate the project and build the app for the Simula
 app/scripts/docker-test  # MuDoCore tests on Linux
 ```
 
-The generated `ios/MuDoPhone.xcodeproj` is git-ignored. For a Simulator run without a real setup, start the fake server and add `http://127.0.0.1:7881` in the app:
+The generated `ios/MuDoPhone.xcodeproj` is git-ignored. `make ios-app` only compiles (`CODE_SIGNING_ALLOWED=NO`): an unsigned app cannot use the Keychain in the Simulator, so adding a server fails with "Could not save the token to the Keychain". To run the app, build it ad hoc signed instead (`xcodebuild ... CODE_SIGN_IDENTITY=-`) or run it from Xcode with a team. For a Simulator run without a real setup, start the fake server and add `http://127.0.0.1:7881` in the app:
 
 ```bash
 mudod fake --addr 127.0.0.1:7881 --token fake-token --step 3s

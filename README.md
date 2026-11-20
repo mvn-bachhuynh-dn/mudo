@@ -279,6 +279,8 @@ Adding, removing and tuning accounts stays in the `cswap` CLI.
 
 A small iPhone app shows the sessions of all your servers and, with `cswap`, the Claude accounts of each server, with a confirmation before it switches one. It is read from the same `mudod` API as the Mac app.
 
+<p align="center"><img src="docs/images/iphone-sessions.png" width="200" alt="MuDo on iPhone, Sessions tab: three done sessions with project, agent and last prompt"> <img src="docs/images/iphone-accounts.png" width="200" alt="MuDo on iPhone, Accounts tab: cswap accounts with 5 h and 7 d usage bars"> <img src="docs/images/iphone-servers.png" width="200" alt="MuDo on iPhone, Servers tab: one server, online"></p>
+
 - **Needs.** Tailscale on the iPhone, and `mudod` 0.13.0 or later on a server for the Accounts tab.
 - **Install.** It is not on the App Store: build it from source with Xcode and a free Apple ID. Run `app/ios/scripts/xcodegen` (the pinned XcodeGen; enough to open the project), then open `app/ios/MuDoPhone.xcodeproj` and run it on the device. `make -C app ios-app` does the same and also compiles for the Simulator (`CODE_SIGNING_ALLOWED=NO`). Every run regenerates the project, so a team and bundle id set in Xcode are lost: set `DEVELOPMENT_TEAM` and a unique `PRODUCT_BUNDLE_IDENTIFIER` in `app/ios/project.yml` locally and do not commit them. With a free Apple ID the app must be re-signed every 7 days.
 - **Add a server.** Paste the `mudo://add?...` link printed by `mudod install`, or fill in the URL and the token. The URL looks like `http://100.64.0.10:7879`.

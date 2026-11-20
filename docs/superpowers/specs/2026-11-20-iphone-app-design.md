@@ -40,7 +40,8 @@ Three tabs: **Sessions | Accounts | Servers**.
 ## Testing
 
 - Unit tests in `MuDoCoreTests` for `CswapClient` (fake `URLProtocol`: 200, 204, 401, 404, 5xx, timeout, request path and headers) and for any logic moved down. They fail without the change. Run with `app/scripts/docker-test` or `on-mac`.
-- The iOS target is verified by the GitHub CI compile (`make -C app ios-core ios-app` on a macOS runner). The build Mac was offline during development, so the first run in the Simulator (against the fake `mudod`, which serves made-up sessions and cswap accounts) and on a real iPhone still has to be done by the owner. Screenshots, if any, come from the fake `mudod`, never from a real setup.
+- The iOS target is verified by the GitHub CI compile (`make -C app ios-core ios-app` on a macOS runner) and by a run in the iOS Simulator (iPhone 17, iOS 26.4) against the fake `mudod` on `127.0.0.1` (2026-11-21): adding a server by the form, the Sessions tab with the fake sessions, the Accounts tab with the fake cswap accounts (bars, check mark, a `relogin_required` row dimmed). Not yet tested: a real iPhone, a Tailscale address (the Simulator run used loopback, so App Transport Security over Tailscale is still unverified), the `mudo://add` link (iOS asks "Open in MuDo?" first), and a cswap switch.
+- Findings from that run: an unsigned Simulator build (`CODE_SIGNING_ALLOWED=NO`) cannot use the Keychain, so a manual Simulator run needs ad hoc signing (`CODE_SIGN_IDENTITY=-`); the token field made iOS offer to save a password, fixed with `textContentType(.oneTimeCode)`; the first tab-bar tap right after adding a server was swallowed once (not reproduced afterwards, cause unknown).
 - Not verifiable from Linux: any iOS build. Installing on a real iPhone is done by the owner from Xcode.
 - Public repo rules apply: no real addresses, tokens or hostnames in code, tests, docs or screenshots (`100.64.0.10`, `fd7a:115c:a1e0::10`, `devbox` only).
 
