@@ -16,6 +16,8 @@ struct RootView: View {
             ServersView(model: model).tag("servers")
                 .tabItem { Label("Servers", systemImage: "server.rack") }
         }
+        .onChange(of: model.servers) { _, _ in Task { await cswap.refresh() } }
+        .onChange(of: cswap.sources.isEmpty) { _, empty in if empty && tab == "accounts" { tab = "sessions" } }
         .onAppear { if model.servers.isEmpty { tab = "servers" } }
     }
 }
