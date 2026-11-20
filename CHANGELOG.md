@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.15.0...v0.16.0) (2026-11-20)
+
+
+### Features
+
+* **ios:** iPhone app for sessions and cswap ([#57](https://github.com/mvn-bachhuynh-dn/mudo/issues/57)) ([3f3e69e](https://github.com/mvn-bachhuynh-dn/mudo/commit/3f3e69ecbbc6a54a1be2ace9f4f9cd91911eb4ee))
+
 ## [0.15.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.14.0...v0.15.0) (2026-11-17)
 
 
