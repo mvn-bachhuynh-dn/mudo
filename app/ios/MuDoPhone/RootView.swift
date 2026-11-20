@@ -6,7 +6,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            Text("Sessions").tag("sessions")
+            SessionsView(model: model).tag("sessions")
                 .tabItem { Label("Sessions", systemImage: "list.bullet") }
             ServersView(model: model).tag("servers")
                 .tabItem { Label("Servers", systemImage: "server.rack") }
