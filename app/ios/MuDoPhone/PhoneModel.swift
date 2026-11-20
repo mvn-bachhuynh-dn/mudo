@@ -32,9 +32,10 @@ final class PhoneModel {
     }
 
     func add(_ draft: ServerDraft) {
+        guard !servers.contains(where: { $0.daemonURL == draft.daemonURL }) else { return }
         let config = ServerConfig(id: UUID(), name: draft.name, daemonURL: draft.daemonURL,
                                   codeServerURL: draft.codeServerURL)
-        KeychainStore.write(draft.token, account: config.id.uuidString)
+        guard KeychainStore.write(draft.token, account: config.id.uuidString) else { return }
         servers.append(config)
         persist()
         if active { connect(config) }
