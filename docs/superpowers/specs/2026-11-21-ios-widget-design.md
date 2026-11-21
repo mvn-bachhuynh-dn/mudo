@@ -2,7 +2,7 @@
 
 ## Goal
 
-Widgets for the MuDo iPhone app that show the active cswap account of a server and its 3 most recent sessions, on the home screen and the lock screen.
+Widgets for the MuDo iPhone app that show the active cswap account of a server and the first 3 sessions of the Sessions tab, on the home screen and the lock screen.
 
 ## Decisions
 
@@ -12,15 +12,15 @@ Widgets for the MuDo iPhone app that show the active cswap account of a server a
    | Widget | Shows |
    |---|---|
    | Home small | The active account of the server: alias or email, 5 h and 7 d bars with %, severity colors as in the app. |
-   | Home medium | Left: the same account. Right: the 3 most recent sessions (project, state dot, time since the last state change). |
-   | Home large | Up to 5 accounts of the server, sorted with `CswapOrder` (the app's sort switch is honored), each with 5 h and 7 d bars; below, the 3 most recent sessions. |
+   | Home medium | Left: the same account. Right: the first 3 sessions in the Sessions tab order (project, state dot, time since the last state change). |
+   | Home large | Up to 5 accounts of the server, sorted with `CswapOrder` (the app's sort switch is honored), each with 5 h and 7 d bars; below, the first 3 sessions in the Sessions tab order. |
    | Lock rectangle | Content Account: name and two lines 5 h / 7 d. Content Sessions: 3 lines, project and state. |
    | Lock circular | A gauge for the 5 h usage of the active account, labelled `5h` and the %. |
    | Lock inline | `<name> 5h 18% · 7d 41%` |
 
 3. **"Active account"** is the account with the check mark (`active`) on that server. If it needs a new login or its usage cannot be read, the widget says so instead of showing empty bars.
-4. **"3 most recent sessions"**: sessions in state `waiting` first (newest state change first), then all others except `ended` (newest state change first); the first 3. A pure function `RecentSessions.pick(_:count:)` in `MuDoCore`.
-5. **Data source, no `mudod` change.** The widget calls `GET /v1/cswap` and reads the first `snapshot` event of `GET /v1/stream` (mudod sends it on connect), then closes the stream: `SessionSnapshot.fetch(daemon:token:)` in `MuDoCore`. Both calls run in parallel with a timeout of about 10 s.
+4. **"First 3 sessions"**: the widget shows the first 3 rows of the app's Sessions tab order: waiting, stale done, done, running (each longest in state first), then idle and ended sessions newest first (idle and ended ones are hidden after 7 days, like the app). The rules live in the shared `SessionOrder` in `MuDoCore`, used by `SessionStore.rows` and by the pure function `RecentSessions.pick(_:serverNow:count:)`; the time in state is measured against the `server_now` of the snapshot.
+5. **Data source, no `mudod` change.** The widget calls `GET /v1/cswap` and reads the first `snapshot` event of `GET /v1/stream` (mudod sends it on connect), then closes the stream: `SessionSnapshot.fetch(daemon:token:)` in `MuDoCore` (it returns the sessions and `server_now`). Both calls run in parallel with a timeout of about 10 s.
 6. **Refresh.** One timeline entry per fetch, next refresh requested after 15 minutes (iOS decides the real schedule and may be slower). On failure: an entry that says `offline`, `token invalid` or `open MuDo to add a server`, retry after 5 minutes. The app calls `WidgetCenter.shared.reloadAllTimelines()` after a server is added or removed and after an account switch. Widgets are not real time.
 7. **Tap.** A widget opens the app on the Accounts or Sessions tab through `mudo://open?tab=accounts|sessions`; the app handles it with `onOpenURL` next to the existing `mudo://add` handling.
 8. **Sharing data between the app and the extension** (Keychain access group `<TeamID>.dev.steve.MuDoPhone.shared`, no App Group):
