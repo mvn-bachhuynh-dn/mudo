@@ -116,21 +116,18 @@ private struct AccountBlock: View {
     }
 }
 
-/// Lock screen rectangle: the whole account name (2 lines, shrinks) and one usage line.
+/// Lock screen rectangle: the account name on ONE line that shrinks to fit (WidgetKit cannot scroll
+/// text, and a second line pushed the usage bars out of shape), then the 5 h / 7 d bars as on the home screen.
 private struct LockAccountBlock: View {
     let entry: MuDoEntry
 
     var body: some View {
         if let account = entry.active {
             let row = CswapRowModel(account)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.title).font(.footnote).bold().lineLimit(2).minimumScaleFactor(0.7)
-                if let detail = row.detail {
-                    Text(detail).font(.caption2).lineLimit(1)
-                } else {
-                    Text(account.windows.prefix(2).map { "\($0.name) \(CswapRowModel.percent($0.pct))" }.joined(separator: " · "))
-                        .font(.caption2).lineLimit(1)
-                }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(row.title).font(.headline).lineLimit(1).minimumScaleFactor(0.5)
+                if let detail = row.detail { Text(detail).font(.caption2).lineLimit(1) }
+                ForEach(account.windows.prefix(2), id: \.name) { UsageBar(window: $0) }
             }
         } else {
             Text(entry.accountsError ?? "No active account").font(.footnote).lineLimit(2)
