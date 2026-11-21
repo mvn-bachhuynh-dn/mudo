@@ -168,8 +168,8 @@ private struct SessionList: View {
     private static let sessionsURL = URL(string: "mudo://open?tab=sessions")!
 
     /// A session from Slack opens its Slack thread; any other opens the Sessions tab.
-    private func url(for s: Session) -> URL {
-        SlackLink.mobileURL(for: s, fallbackTeam: ServerStore.slackTeamID) ?? Self.sessionsURL
+    private func url(for s: Session, team: String) -> URL {
+        SlackLink.mobileURL(for: s, fallbackTeam: team) ?? Self.sessionsURL
     }
 
     var body: some View {
@@ -177,9 +177,10 @@ private struct SessionList: View {
             let text = Text(entry.sessionsError ?? "No sessions").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
             if compact { text } else { Link(destination: Self.sessionsURL) { text } }
         } else {
+            let team = compact ? "" : ServerStore.slackTeamID  // one Keychain read per body, not per row
             VStack(alignment: .leading, spacing: compact ? 1 : 4) {
                 ForEach(entry.sessions) { s in
-                    row(s).modifier(RowLink(url: compact ? nil : url(for: s)))
+                    row(s).modifier(RowLink(url: compact ? nil : url(for: s, team: team)))
                 }
             }
         }

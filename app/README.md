@@ -59,7 +59,7 @@ mudod fake --addr 127.0.0.1:7881 --token fake-token --step 3s
 
 ### Open Slack from a session
 
-`SlackLink.mobileURL(for:fallbackTeam:)` (MuDoCore) builds `slack://channel?team=<T>&id=<C>` for a session whose `terminal` has a Slack channel; the team is the session's own or the `slackTeamID` pref (Servers tab, **Slack**; stored with the sort switch in the shared prefs Keychain item), without any team it is slack.com's `app_redirect`. `&message=<thread ts>` is UNDOCUMENTED by Slack; `SlackLink.mobileThreadParameter = false` drops it (channel only). The Sessions tab row is a `Button` (`openURL`) with an arrow icon; in the medium and large widgets each row is a `Link` (Slack URL, else `mudo://open?tab=sessions`). The lock screen rectangle has no links. Sessions without Slack data are not tappable in the app.
+`SlackLink.mobileURL(for:fallbackTeam:)` (MuDoCore) builds `slack://channel?team=<T>&id=<C>` for a session whose `terminal` has a Slack channel; the team is the session's own or the `slackTeamID` pref (Servers tab, **Slack**; stored with the sort switch in the shared prefs Keychain item), without any team it is slack.com's `app_redirect`. `&message=<thread ts>` is UNDOCUMENTED by Slack, so the jump to the thread may open only the channel; `SlackLink.mobileThreadParameter = false` drops it (channel only). The Sessions tab row is a `Button` (`openURL`) with an arrow icon; in the medium and large widgets each row is a `Link` (Slack URL, else `mudo://open?tab=sessions`). The lock screen rectangle has no links. Sessions without Slack data are not tappable in the app.
 
 ### Widgets
 

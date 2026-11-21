@@ -6,7 +6,7 @@ A session started from Slack by KiroCrew carries `terminal.slackChannel`, `slack
 
 ## Decisions
 
-1. **Link.** `slack://channel?team=<T>&id=<C>` (documented, channel only). With `&message=<thread ts>` (undocumented, tried on a real iPhone) when the thread is valid. One switch: `SlackLink.mobileThreadParameter` (`public static let`, default true); false opens the channel only.
+1. **Link.** `slack://channel?team=<T>&id=<C>` (documented, channel only). With `&message=<thread ts>` (undocumented by Slack; sent to the Slack app on the owner's iPhone, result not confirmed yet) when the thread is valid. One switch: `SlackLink.mobileThreadParameter` (`public static let`, default true); false opens the channel only, so it can be turned off if the parameter does nothing.
 2. **No valid team**: `https://slack.com/app_redirect?channel=<C>`, as on the Mac. Invalid channel: no link.
 3. **Team source.** The session's `slackTeam`, else the `slackTeamID` pref (Servers tab, Slack section, free text, stored in the existing prefs Keychain item; an old item without the field still decodes).
 4. **App.** A session row with a link is a plain-style `Button` calling `openURL`, with a secondary `arrow.up.right.square` icon at the trailing end. Rows without Slack data stay non-tappable.
