@@ -5,6 +5,7 @@ import SwiftUI
 /// The Accounts tab: cswap accounts with 5h / 7d usage; a click switches the active one.
 struct AccountListView: View {
     let cswap: CswapModel
+    let usableFirst: Bool
 
     /// Room left for the list: most of the main screen's height, minus the tab bar, footer and margins.
     static var maxListHeight: CGFloat {
@@ -48,7 +49,7 @@ struct AccountListView: View {
                         if source.accounts.isEmpty && source.error == nil {
                             Text("No accounts").font(.caption).foregroundStyle(.secondary).padding(6)
                         }
-                        ForEach(source.accounts) { account in
+                        ForEach(CswapOrder.sorted(source.accounts, usableFirst: usableFirst)) { account in
                             AccountRowView(account: account, busy: cswap.switching != nil,
                                            switchingHere: cswap.isSwitching(source, account)) {
                                 Task { await cswap.switchTo(account, in: source) }

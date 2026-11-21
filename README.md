@@ -269,6 +269,7 @@ MuDo can show and switch the Claude accounts managed by [claude-swap](https://py
 - **One machine at a time.** `cswap` keeps its own account list on each machine, so the Mac and every server are separate sources. With more than one source, a picker at the top of the tab chooses between **This Mac** and each server name, and a line under it says which machine a click will switch on. They are never merged into one list.
 - **What a row shows.** The active account (check mark), the 5 h and 7 d usage bars (green under 70 %, orange from 70 %, red from 90 %), model-scoped limits such as Fable, and the reset countdown. An account's alias is its title, else its email.
 - **Switching.** Click an inactive account to run `cswap switch <number>` on that machine, then the list refreshes. A switch applies to new Claude Code sessions; running ones keep their account. An account that needs a new login is not clickable (log in with Claude Code, then run `cswap add`), and a reading older than the live one is dimmed.
+- **Order.** By default the active account comes first, then accounts whose usage can be read, then those with unreadable usage, then those that need a new login (inside a group the `cswap list` order is kept). Turn off "Sort accounts: usable first" in Settings to see the exact `cswap list` order.
 - **Refresh.** When the tab opens and every minute while it is shown. Long lists scroll.
 - **Where `cswap` must be.** On the Mac: `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin` (the app has no login-shell `PATH`, so nothing else is searched). On a server: for the daemon's user, same folders, with `mudod` 0.13.0 or later; the daemon serves `GET /v1/cswap` and `POST /v1/cswap/switch/{number}` behind its token (see [server/README.md](server/README.md#cswap-claude-swap-accounts)). A server without `cswap`, or with an older `mudod`, is simply left out of the picker.
 - **Off switch.** "Show Accounts tab (cswap)" in Settings (shown when `cswap` is found on this Mac or on a server). The tab also appears when only a server has `cswap`.
@@ -281,6 +282,7 @@ A small iPhone app shows the sessions of all your servers and, with `cswap`, the
 
 <p align="center"><img src="docs/images/iphone-sessions.png" width="200" alt="MuDo on iPhone, Sessions tab: three done sessions with project, agent and last prompt"> <img src="docs/images/iphone-accounts.png" width="200" alt="MuDo on iPhone, Accounts tab: cswap accounts with 5 h and 7 d usage bars"> <img src="docs/images/iphone-servers.png" width="200" alt="MuDo on iPhone, Servers tab: one server, online"></p>
 
+- **Sorting.** The Accounts tab sorts the same way as the Mac widget; the sort button at the top right of the tab turns it off.
 - **Needs.** Tailscale on the iPhone, and `mudod` 0.13.0 or later on a server for the Accounts tab.
 - **Install.** It is not on the App Store: build it from source with Xcode and a free Apple ID. Run `app/ios/scripts/xcodegen` (the pinned XcodeGen; enough to open the project), then open `app/ios/MuDoPhone.xcodeproj` and run it on the device. `make -C app ios-app` does the same and also compiles for the Simulator (`CODE_SIGNING_ALLOWED=NO`). Every run regenerates the project, so a team and bundle id set in Xcode are lost: set `DEVELOPMENT_TEAM` and a unique `PRODUCT_BUNDLE_IDENTIFIER` in `app/ios/project.yml` locally and do not commit them. With a free Apple ID the app must be re-signed every 7 days.
 - **Add a server.** Paste the `mudo://add?...` link printed by `mudod install`, or fill in the URL and the token. The URL looks like `http://100.64.0.10:7879`.
@@ -320,6 +322,7 @@ When exactly one plain `ssh` to that server is open, a click may land on that ta
 - Alerts: Blink after N min, Snooze for N min, Auto-acknowledge when already in view (default on).
 - Hidden sessions: one folder pattern per line, `*` matches anything (including `/`), matched against the full session folder. Defaults: `*/kirocrew-workspace/_bg*`, `/tmp/*`.
 - Accounts tab: "Show Accounts tab (cswap)" (default on; shown only when `cswap` is found on this Mac or on a server).
+- Accounts tab sort: "Sort accounts: usable first" (default on, shown with the previous one).
 - Launch at login.
 
 ## Troubleshooting

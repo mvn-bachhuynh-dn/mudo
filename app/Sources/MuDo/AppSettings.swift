@@ -20,6 +20,7 @@ final class AppSettings {
         static let slackTeam = "slackTeamID"
         static let checkUpdates = "checkForUpdates"
         static let showAccounts = "showAccountsTab"
+        static let sortAccounts = "sortAccountsUsableFirst"
         static let lastUpdateCheck = "lastUpdateCheck"
         static let latestVersion = "latestVersion"
         static let latestReleaseURL = "latestReleaseURL"
@@ -104,6 +105,11 @@ final class AppSettings {
         didSet { defaults.set(showAccountsTab, forKey: Key.showAccounts) }
     }
 
+    /// Sort the Accounts tab: active account first, accounts that need a new login last.
+    var sortAccountsUsableFirst: Bool {
+        didSet { defaults.set(sortAccountsUsableFirst, forKey: Key.sortAccounts) }
+    }
+
     static let defaultIgnoredPaths = ["*/kirocrew-workspace/_bg*", "/tmp/*"]
 
     /// Glob patterns for session folders to hide, one per entry.
@@ -128,6 +134,7 @@ final class AppSettings {
         slackTeamID = defaults.string(forKey: Key.slackTeam) ?? ""
         checkForUpdates = defaults.object(forKey: Key.checkUpdates) as? Bool ?? true
         showAccountsTab = defaults.object(forKey: Key.showAccounts) as? Bool ?? true
+        sortAccountsUsableFirst = defaults.object(forKey: Key.sortAccounts) as? Bool ?? true
         lastUpdateCheck = defaults.object(forKey: Key.lastUpdateCheck) as? Date
         latestVersion = defaults.string(forKey: Key.latestVersion)
         latestReleaseURL = defaults.string(forKey: Key.latestReleaseURL)
