@@ -20,24 +20,35 @@ public enum SessionSnapshot {
         }
     }
 
-    /// The sessions of the first `snapshot` event, or nil when the stream ends without one.
-    public static func first(from events: AsyncThrowingStream<SSEEvent, any Error>) async throws -> [Session]? {
+    /// The server clock and the sessions of a `snapshot` event.
+    public struct Snapshot: Equatable, Sendable {
+        public var serverNow: Date
+        public var sessions: [Session]
+
+        public init(serverNow: Date, sessions: [Session]) {
+            self.serverNow = serverNow
+            self.sessions = sessions
+        }
+    }
+
+    /// The first `snapshot` event, or nil when the stream ends without one.
+    public static func first(from events: AsyncThrowingStream<SSEEvent, any Error>) async throws -> Snapshot? {
         for try await event in events where event.event == "snapshot" {
-            if case let .snapshot(_, _, sessions)? = try StreamMessage.decode(event: event.event, data: event.data) {
-                return sessions
+            if case let .snapshot(serverNow, _, sessions)? = try StreamMessage.decode(event: event.event, data: event.data) {
+                return Snapshot(serverNow: serverNow, sessions: sessions)
             }
         }
         return nil
     }
 
     public static func fetch(daemon: URL, token: String, transport: any EventTransport,
-                             timeout: Duration = .seconds(10)) async -> Result<[Session], Failure> {
+                             timeout: Duration = .seconds(10)) async -> Result<Snapshot, Failure> {
         let url = daemon.appending(path: "v1/stream")
-        return await withTaskGroup(of: Result<[Session], Failure>.self) { group in
+        return await withTaskGroup(of: Result<Snapshot, Failure>.self) { group in
             group.addTask {
                 do {
-                    if let sessions = try await first(from: transport.events(url: url, token: token)) {
-                        return .success(sessions)
+                    if let snapshot = try await first(from: transport.events(url: url, token: token)) {
+                        return .success(snapshot)
                     }
                     return .failure(.noSnapshot)
                 } catch StreamError.unauthorized {

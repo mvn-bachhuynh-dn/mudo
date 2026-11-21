@@ -23,8 +23,8 @@ enum Loader {
             entry.accountsError = failure.message
         }
         switch await sessionsResult {
-        case .success(let sessions):
-            entry.sessions = RecentSessions.pick(sessions)
+        case .success(let snapshot):
+            entry.sessions = RecentSessions.pick(snapshot.sessions, serverNow: snapshot.serverNow)
         case .failure(let failure):
             entry.sessionsError = failure.message
         }
