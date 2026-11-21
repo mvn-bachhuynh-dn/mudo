@@ -8,7 +8,6 @@ struct MuDoWidgetView: View {
 
     // Link is only honoured in the medium and large home widgets; everything else uses .widgetURL.
     private static let accountsURL = URL(string: "mudo://open?tab=accounts")!
-    private static let sessionsURL = URL(string: "mudo://open?tab=sessions")!
 
     var body: some View {
         content
@@ -32,13 +31,13 @@ struct MuDoWidgetView: View {
                         Fetched(date: entry.date, server: entry.serverName)
                     }
                     Divider()
-                    Link(destination: Self.sessionsURL) { SessionList(entry: entry, compact: false) }
+                    SessionList(entry: entry, compact: false)
                 }
             case .systemLarge:
                 VStack(alignment: .leading, spacing: 6) {
                     Link(destination: Self.accountsURL) { AccountList(entry: entry) }
                     Divider()
-                    Link(destination: Self.sessionsURL) { SessionList(entry: entry, compact: false) }
+                    SessionList(entry: entry, compact: false)
                     Spacer(minLength: 0)
                     Fetched(date: entry.date, server: entry.serverName)
                 }
@@ -165,23 +164,36 @@ private struct SessionList: View {
     let entry: MuDoEntry
     let compact: Bool
 
+    // Link is only honoured in the medium and large home widgets, so the compact lock screen variant has none.
+    private static let sessionsURL = URL(string: "mudo://open?tab=sessions")!
+
+    /// A session from Slack opens its Slack thread; any other opens the Sessions tab.
+    private func url(for s: Session) -> URL {
+        SlackLink.mobileURL(for: s, fallbackTeam: ServerStore.slackTeamID) ?? Self.sessionsURL
+    }
+
     var body: some View {
         if entry.sessions.isEmpty {
-            Text(entry.sessionsError ?? "No sessions").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+            let text = Text(entry.sessionsError ?? "No sessions").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+            if compact { text } else { Link(destination: Self.sessionsURL) { text } }
         } else {
             VStack(alignment: .leading, spacing: compact ? 1 : 4) {
                 ForEach(entry.sessions) { s in
-                    HStack(spacing: 5) {
-                        Circle().fill(color(s.state)).frame(width: 7, height: 7)
-                        Text(s.project).font(compact ? .caption : .footnote).bold().lineLimit(1)
-                        Spacer(minLength: 2)
-                        Group {
-                            if compact { Text(s.state.rawValue) } else { Text(s.stateSince, style: .relative) }
-                        }
-                        .font(.caption2).foregroundStyle(.secondary)
-                    }
+                    row(s).modifier(RowLink(url: compact ? nil : url(for: s)))
                 }
             }
+        }
+    }
+
+    private func row(_ s: Session) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color(s.state)).frame(width: 7, height: 7)
+            Text(s.project).font(compact ? .caption : .footnote).bold().lineLimit(1)
+            Spacer(minLength: 2)
+            Group {
+                if compact { Text(s.state.rawValue) } else { Text(s.stateSince, style: .relative) }
+            }
+            .font(.caption2).foregroundStyle(.secondary)
         }
     }
 
@@ -192,5 +204,14 @@ private struct SessionList: View {
         case .done: .green
         case .idle, .ended: .gray
         }
+    }
+}
+
+/// Wraps a row in a `Link` when it has a URL (a `Link` cannot nest in another `Link`).
+private struct RowLink: ViewModifier {
+    let url: URL?
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if let url { Link(destination: url) { content } } else { content }
     }
 }

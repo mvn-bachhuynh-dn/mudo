@@ -39,8 +39,25 @@ struct SessionsView: View {
 private struct SessionRowView: View {
     let row: SessionRow
     let showServer: Bool
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
+        if let url = SlackLink.mobileURL(for: row.session, fallbackTeam: ServerStore.slackTeamID) {
+            Button { openURL(url) } label: {
+                HStack(alignment: .top, spacing: 8) {
+                    content
+                    Image(systemName: "arrow.up.right.square").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the Slack thread")
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         HStack(alignment: .top, spacing: 10) {
             Circle().fill(color).frame(width: 10, height: 10).padding(.top, 5)
             VStack(alignment: .leading, spacing: 2) {
