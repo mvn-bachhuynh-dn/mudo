@@ -5,7 +5,32 @@ import MuDoCore
 enum ServerStore {
     private static let serversAccount = "servers"
     private static let prefsAccount = "prefs"
-    private struct Prefs: Codable { var sortUsableFirst: Bool }
+    private struct Prefs: Codable {
+        var sortUsableFirst: Bool
+        var slackTeamID: String
+
+        init(sortUsableFirst: Bool = true, slackTeamID: String = "") {
+            self.sortUsableFirst = sortUsableFirst
+            self.slackTeamID = slackTeamID
+        }
+
+        /// An item saved before `slackTeamID` existed has no such key.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            sortUsableFirst = try c.decode(Bool.self, forKey: .sortUsableFirst)
+            slackTeamID = try c.decodeIfPresent(String.self, forKey: .slackTeamID) ?? ""
+        }
+    }
+
+    private static func loadPrefs() -> Prefs {
+        guard let data = KeychainStore.readData(prefsAccount),
+              let prefs = try? JSONDecoder().decode(Prefs.self, from: data) else { return Prefs() }
+        return prefs
+    }
+
+    private static func savePrefs(_ prefs: Prefs) {
+        if let data = try? JSONEncoder().encode(prefs) { _ = KeychainStore.writeData(data, account: prefsAccount) }
+    }
 
     static func load() -> [ServerConfig] {
         guard let data = KeychainStore.readData(serversAccount),
@@ -19,16 +44,14 @@ enum ServerStore {
 
     /// Whether usable accounts are listed first; true when never set.
     static var sortUsableFirst: Bool {
-        get {
-            guard let data = KeychainStore.readData(prefsAccount),
-                  let prefs = try? JSONDecoder().decode(Prefs.self, from: data) else { return true }
-            return prefs.sortUsableFirst
-        }
-        set {
-            if let data = try? JSONEncoder().encode(Prefs(sortUsableFirst: newValue)) {
-                _ = KeychainStore.writeData(data, account: prefsAccount)
-            }
-        }
+        get { loadPrefs().sortUsableFirst }
+        set { var prefs = loadPrefs(); prefs.sortUsableFirst = newValue; savePrefs(prefs) }
+    }
+
+    /// Slack workspace ID (T...) used for sessions that do not carry one; empty when never set.
+    static var slackTeamID: String {
+        get { loadPrefs().slackTeamID }
+        set { var prefs = loadPrefs(); prefs.slackTeamID = newValue; savePrefs(prefs) }
     }
 
     /// After an update: copies the list and the sort switch from the standard defaults, once

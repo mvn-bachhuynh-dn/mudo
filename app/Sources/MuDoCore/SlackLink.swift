@@ -25,6 +25,32 @@ public enum SlackLink {
         return URL(string: "https://app.slack.com/client/\(team)/\(channel)\(path)").map { .web($0, team: team) }
     }
 
+    /// Slack's documented `slack://channel` link has no thread parameter. `&message=<thread ts>` is
+    /// UNDOCUMENTED and may be ignored (the app then opens the channel only). Set to false to open the channel only.
+    public static let mobileThreadParameter: Bool = true
+
+    /// The link a phone opens in the Slack app: `slack://channel?team=<T>&id=<C>` (plus `&message=<ts>` for a
+    /// valid `thread` while `mobileThreadParameter` is on). Without a valid `team`: slack.com's redirect.
+    /// Nil if `channel` is not a valid channel ID.
+    public static func mobileURL(channel: String, team: String?, thread: String?) -> URL? {
+        mobileURL(channel: channel, team: team, thread: thread, includeThread: mobileThreadParameter)
+    }
+
+    static func mobileURL(channel: String, team: String?, thread: String?, includeThread: Bool) -> URL? {
+        guard isChannel(channel) else { return nil }
+        let team = team?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard isTeam(team) else { return URL(string: "https://slack.com/app_redirect?channel=\(channel)") }
+        var link = "slack://channel?team=\(team)&id=\(channel)"
+        if includeThread, let thread, isThread(thread) { link += "&message=\(thread)" }
+        return URL(string: link)
+    }
+
+    /// The phone link of a session started from Slack: its own team, else `fallbackTeam`. Nil without a valid channel.
+    public static func mobileURL(for session: Session, fallbackTeam: String) -> URL? {
+        guard let t = session.terminal?.validated(), let channel = t.slackChannel else { return nil }
+        return mobileURL(channel: channel, team: t.slackTeam ?? fallbackTeam, thread: t.slackThread)
+    }
+
     /// A Slack web tab of `team` to reuse: one already on `channel` (and on `thread`, when valid;
     /// no navigation needed), else the first tab of that workspace (navigate it to the target).
     public static func webTab(in tabs: [ChromeTab], team: String, channel: String,

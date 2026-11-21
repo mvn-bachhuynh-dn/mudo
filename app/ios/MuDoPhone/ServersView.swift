@@ -5,6 +5,7 @@ import UIKit
 struct ServersView: View {
     @Bindable var model: PhoneModel
     @State private var showingAdd = false
+    @State private var slackTeam = ServerStore.slackTeamID
 
     var body: some View {
         NavigationStack {
@@ -28,6 +29,18 @@ struct ServersView: View {
                 .onDelete { offsets in
                     let rows = model.store.servers
                     for i in offsets { model.remove(rows[i].id) }
+                }
+                Section {
+                    TextField("Workspace ID (T…), used when a session does not carry one", text: $slackTeam)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: slackTeam) { _, new in
+                            ServerStore.slackTeamID = new.trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
+                } header: {
+                    Text("Slack")
+                } footer: {
+                    Text("Tapping a session started from Slack opens its thread in the Slack app.")
                 }
             }
             .navigationTitle("Servers")

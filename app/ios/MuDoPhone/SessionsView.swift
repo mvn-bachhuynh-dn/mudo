@@ -8,6 +8,7 @@ struct SessionsView: View {
     var body: some View {
         let store = model.store
         let split = IdleFold.split(store.rows, showAll: showAllIdle)
+        let slackTeam = ServerStore.slackTeamID  // one Keychain read per body, not per row
         NavigationStack {
             List {
                 if store.rows.isEmpty {
@@ -15,7 +16,7 @@ struct SessionsView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(split.rows) { row in
-                    SessionRowView(row: row, showServer: store.hasMultipleServers)
+                    SessionRowView(row: row, showServer: store.hasMultipleServers, slackTeam: slackTeam)
                 }
                 if split.hidden > 0 {
                     Button("+\(split.hidden) idle") { showAllIdle = true }
@@ -39,8 +40,27 @@ struct SessionsView: View {
 private struct SessionRowView: View {
     let row: SessionRow
     let showServer: Bool
+    let slackTeam: String
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
+        if let url = SlackLink.mobileURL(for: row.session, fallbackTeam: slackTeam) {
+            Button { openURL(url) } label: {
+                HStack(alignment: .top, spacing: 8) {
+                    content
+                    Image(systemName: "arrow.up.right.square").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the Slack thread")
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         HStack(alignment: .top, spacing: 10) {
             Circle().fill(color).frame(width: 10, height: 10).padding(.top, 5)
             VStack(alignment: .leading, spacing: 2) {
