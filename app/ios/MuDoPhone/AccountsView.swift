@@ -1,10 +1,11 @@
 import MuDoCore
 import SwiftUI
+import WidgetKit
 
 struct AccountsView: View {
     @Bindable var cswap: PhoneCswap
     @State private var confirming: Pending?
-    @AppStorage("sortUsableFirst") private var usableFirst = true
+    @AppStorage(SharedConfig.sortKey, store: SharedConfig.defaults) private var usableFirst = true
 
     private struct Pending: Identifiable {
         let source: CswapSource
@@ -48,6 +49,7 @@ struct AccountsView: View {
                     }
                 }
             }
+            .onChange(of: usableFirst) { _, _ in WidgetCenter.shared.reloadAllTimelines() }
             .refreshable { await cswap.refresh() }
             .task {
                 while !Task.isCancelled {

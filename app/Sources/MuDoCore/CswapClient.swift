@@ -19,9 +19,11 @@ public struct CswapClient: Sendable {
     }
 
     private let session: URLSession
+    private let timeout: TimeInterval
 
-    public init(session: URLSession = .shared) {
+    public init(session: URLSession = .shared, timeout: TimeInterval = 25) {
         self.session = session
+        self.timeout = timeout
     }
 
     public func list(daemon: URL, token: String) async -> Result<CswapList.Result, Failure> {
@@ -45,7 +47,7 @@ public struct CswapClient: Sendable {
     private func send(daemon: URL, token: String, path: String, method: String) async -> Result<Data, Failure> {
         var request = URLRequest(url: daemon.appending(path: path))
         request.httpMethod = method
-        request.timeoutInterval = 25
+        request.timeoutInterval = timeout
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         do {
             let (body, response) = try await session.data(for: request)
@@ -58,6 +60,8 @@ public struct CswapClient: Sendable {
                 let text = String(decoding: body, as: UTF8.self)
                 return .failure(.message(CswapCommand.errorLine(text.isEmpty ? "HTTP \(code)" : text)))
             }
+        } catch let error as URLError {
+            return .failure(.message(error.code == .timedOut ? "timed out" : "offline"))
         } catch {
             return .failure(.message(error.localizedDescription))
         }

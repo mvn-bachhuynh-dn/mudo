@@ -14,15 +14,20 @@ targets:
   MuDoPhone:
     type: application
     platform: iOS
-    sources: [MuDoPhone]
+    sources: [MuDoPhone, Shared]
     dependencies:
       - package: MuDo
         product: MuDoCore
+      - target: MuDoWidget
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.steve.MuDoPhone
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    entitlements:
+      path: MuDoPhone/MuDoPhone.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.steve.MuDoPhone]
     info:
       path: MuDoPhone/Info.plist
       properties:
@@ -35,3 +40,27 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: dev.steve.MuDoPhone.add
             CFBundleURLSchemes: [mudo]
+  MuDoWidget:
+    type: app-extension
+    platform: iOS
+    sources: [MuDoWidget, Shared]
+    dependencies:
+      - package: MuDo
+        product: MuDoCore
+    entitlements:
+      path: MuDoWidget/MuDoWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.steve.MuDoPhone]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.steve.MuDoPhone.Widget
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+    info:
+      path: MuDoWidget/Info.plist
+      properties:
+        CFBundleDisplayName: MuDo
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true

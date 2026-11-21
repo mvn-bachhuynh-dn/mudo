@@ -11,3 +11,6 @@ app/Resources/mudod
 app/ios/MuDoPhone.xcodeproj/
 app/ios/.tools/
 app/ios/MuDoPhone/Info.plist
+app/ios/MuDoPhone/MuDoPhone.entitlements
+app/ios/MuDoWidget/MuDoWidget.entitlements
+app/ios/MuDoWidget/Info.plist

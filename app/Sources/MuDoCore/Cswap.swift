@@ -7,6 +7,13 @@ public struct CswapWindow: Equatable, Sendable {
     /// Local reset time as cswap prints it ("22:49", "Nov 14 05:59"); nil when not reported.
     public var clock: String?
     public var countdown: String?
+
+    public init(name: String, pct: Double, clock: String?, countdown: String?) {
+        self.name = name
+        self.pct = pct
+        self.clock = clock
+        self.countdown = countdown
+    }
 }
 
 public struct CswapAccount: Equatable, Sendable, Identifiable {
@@ -28,6 +35,18 @@ public struct CswapAccount: Equatable, Sendable, Identifiable {
     public var stale: Bool
 
     public var id: Int { number }
+
+    public init(number: Int, email: String, organization: String, alias: String?, active: Bool,
+                status: Status, windows: [CswapWindow], stale: Bool) {
+        self.number = number
+        self.email = email
+        self.organization = organization
+        self.alias = alias
+        self.active = active
+        self.status = status
+        self.windows = windows
+        self.stale = stale
+    }
 }
 
 public enum CswapParseError: Error, Equatable {

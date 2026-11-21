@@ -30,6 +30,13 @@ extension StubHTTPTests {
         #expect(req.value(forHTTPHeaderField: "Authorization") == "Bearer fake-token")
     }
 
+    @Test func timeoutIsConfigurable() async {
+        let json = listJSON
+        let c = CswapClient(session: StubURLProtocol.session { _ in (200, json) }, timeout: 10)
+        _ = await c.list(daemon: daemon, token: "t")
+        #expect(StubURLProtocol.requests.first?.timeoutInterval == 10)
+    }
+
     @Test func listWorksWithAnIPv6Daemon() async throws {
         let json = listJSON
         let c = client { _ in (200, json) }
@@ -73,7 +80,7 @@ extension StubHTTPTests {
         guard case .failure(.message(let m)) = await c.list(daemon: daemon, token: "t") else {
             Issue.record("expected a message failure"); return
         }
-        #expect(!m.isEmpty)
+        #expect(m == "offline")
     }
 
     @Test func switchPostsToTheNumberedPath() async throws {

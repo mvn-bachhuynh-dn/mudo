@@ -18,6 +18,7 @@ This repository is public. Never commit real IP addresses, hostnames, domains, t
 
 - Lives in `app/ios` (XcodeGen source: `app/ios/project.yml`). The generated `.xcodeproj` is git-ignored; never commit it. No signing identity or team is committed.
 - `MuDoCore` must stay buildable for Linux and iOS: no UIKit, AppKit or Security there. Keep logic in `MuDoCore`, UI in `app/ios`.
+- `app/ios/Shared` is compiled into both the app and the widget extension (`MuDoWidget`): keep it free of app-only types and UI.
 - Verify: `app/scripts/docker-test` on Linux. `make -C app ios-core ios-app` needs macOS and Xcode; CI covers both on `macos-26`.
 - Running it needs a Mac with Simulator or a device. A free Apple ID must re-sign every 7 days.
 - Spec: `docs/superpowers/specs/2026-11-20-iphone-app-design.md`; plan: `docs/superpowers/plans/2026-11-20-iphone-app.md`.

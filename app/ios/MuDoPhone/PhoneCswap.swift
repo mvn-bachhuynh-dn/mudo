@@ -1,6 +1,7 @@
 import Foundation
 import MuDoCore
 import Observation
+import WidgetKit
 
 @MainActor
 @Observable
@@ -50,5 +51,6 @@ final class PhoneCswap {
         if case .failure(let failure) = result, let i = sources.firstIndex(where: { $0.id == source.id }) {
             sources[i].error = failure.message
         }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
