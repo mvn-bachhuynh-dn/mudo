@@ -1,6 +1,7 @@
 import Foundation
 import MuDoCore
 import Observation
+import WidgetKit
 
 @MainActor
 @Observable
@@ -9,19 +10,17 @@ final class PhoneModel {
     private(set) var servers: [ServerConfig] = []
     /// A server from a `mudo://add` link, waiting for the user to confirm.
     var pendingDraft: ServerDraft?
+    /// A tab asked for by a `mudo://open?tab=` link (the widget); RootView consumes it.
+    var requestedTab: String?
 
     @ObservationIgnored private var connections: [UUID: ServerConnection] = [:]
     @ObservationIgnored private var active = false
-    @ObservationIgnored private let defaults: UserDefaults
-    private static let serversKey = "servers"
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    init() {
         store.hideIdleAfter = TimeInterval(IdleFold.defaultHours * 3600)
-        if let data = defaults.data(forKey: Self.serversKey),
-           let saved = try? JSONDecoder().decode([ServerConfig].self, from: data) {
-            servers = saved.filter { !$0.managedLocal }
-        }
+        ServerStore.migrateFromStandardDefaults()
+        servers = ServerStore.load()
+        KeychainStore.migrateToSharedGroup(accounts: servers.map { $0.id.uuidString })
         store.setServers(servers)
     }
 
@@ -76,7 +75,12 @@ final class PhoneModel {
     }
 
     func handle(url: URL) {
-        if let draft = AddLink.parse(url) { pendingDraft = draft }
+        if let draft = AddLink.parse(url) { pendingDraft = draft; return }
+        if url.scheme?.lowercased() == "mudo", url.host?.lowercased() == "open",
+           let tab = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "tab" })?.value,
+           ["accounts", "sessions"].contains(tab) {
+            requestedTab = tab
+        }
     }
 
     private func connect(_ config: ServerConfig) {
@@ -88,6 +92,7 @@ final class PhoneModel {
 
     private func persist() {
         store.setServers(servers)
-        if let data = try? JSONEncoder().encode(servers) { defaults.set(data, forKey: Self.serversKey) }
+        ServerStore.save(servers)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

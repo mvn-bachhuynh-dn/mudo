@@ -4,7 +4,7 @@ import SwiftUI
 struct AccountsView: View {
     @Bindable var cswap: PhoneCswap
     @State private var confirming: Pending?
-    @AppStorage("sortUsableFirst") private var usableFirst = true
+    @AppStorage(SharedConfig.sortKey, store: SharedConfig.defaults) private var usableFirst = true
 
     private struct Pending: Identifiable {
         let source: CswapSource
