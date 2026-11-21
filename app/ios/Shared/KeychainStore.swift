@@ -31,7 +31,12 @@ enum KeychainStore {
     /// Writes to the shared group; when that is not possible writes the legacy item so the app keeps working.
     @discardableResult
     static func write(_ value: String, account: String) -> Bool {
-        if write(value, account: account, shared: true) { return true }
+        if write(value, account: account, shared: true) {
+            // Best effort, update only: keeps an old unmigrated item from disagreeing with the shared one.
+            SecItemUpdate(query(account, shared: false) as CFDictionary,
+                          [kSecValueData as String: Data(value.utf8)] as CFDictionary)
+            return true
+        }
         return write(value, account: account, shared: false)
     }
 

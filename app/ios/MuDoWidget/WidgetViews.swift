@@ -15,14 +15,14 @@ struct MuDoWidgetView: View {
 
     @ViewBuilder private var content: some View {
         if let message = entry.message {
-            Text(message).font(.footnote)
+            Text(message).font(.footnote).lineLimit(2)
         } else {
             switch family {
             case .systemSmall:
-                VStack(alignment: .leading, spacing: 4) { AccountBlock(entry: entry); Spacer(minLength: 0); Fetched(date: entry.date) }
+                VStack(alignment: .leading, spacing: 4) { AccountBlock(entry: entry); Spacer(minLength: 0); Fetched(date: entry.date, server: entry.serverName) }
             case .systemMedium:
                 HStack(alignment: .top, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 4) { AccountBlock(entry: entry); Spacer(minLength: 0); Fetched(date: entry.date) }
+                    VStack(alignment: .leading, spacing: 4) { AccountBlock(entry: entry); Spacer(minLength: 0); Fetched(date: entry.date, server: entry.serverName) }
                     Divider()
                     SessionList(entry: entry, compact: false)
                 }
@@ -32,7 +32,7 @@ struct MuDoWidgetView: View {
                     Divider()
                     SessionList(entry: entry, compact: false)
                     Spacer(minLength: 0)
-                    Fetched(date: entry.date)
+                    Fetched(date: entry.date, server: entry.serverName)
                 }
             case .accessoryRectangular:
                 if entry.content == .sessions { SessionList(entry: entry, compact: true) } else { AccountBlock(entry: entry) }
@@ -54,15 +54,20 @@ struct MuDoWidgetView: View {
     private var inlineText: String {
         guard let a = entry.active else { return entry.accountsError ?? "no active account" }
         let row = CswapRowModel(a)
+        let name = row.title.components(separatedBy: "@").first ?? row.title
+        if a.status == .reloginRequired { return "\(name) login needed" }
         let parts = a.windows.prefix(2).map { "\($0.name) \(CswapRowModel.percent($0.pct))" }
-        return ([row.title.components(separatedBy: "@").first ?? row.title] + parts).joined(separator: " ")
+        return ([name] + [parts.joined(separator: " · ")]).joined(separator: " ")
     }
 }
 
 private struct Fetched: View {
     let date: Date
+    let server: String?
     var body: some View {
-        Text("\(Text(date, style: .relative)) ago").font(.caption2).foregroundStyle(.secondary)
+        let prefix = server.map { "\($0) · " } ?? ""
+        Text("\(prefix)\(Text(date, style: .relative)) ago")
+            .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
     }
 }
 
@@ -98,7 +103,7 @@ private struct AccountBlock: View {
                 ForEach(account.windows.prefix(2), id: \.name) { UsageBar(window: $0) }
             }
         } else {
-            Text(entry.accountsError ?? "No active account").font(.footnote).foregroundStyle(.secondary)
+            Text(entry.accountsError ?? "No active account").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
         }
     }
 }
@@ -108,7 +113,7 @@ private struct AccountList: View {
 
     var body: some View {
         if entry.accounts.isEmpty {
-            Text(entry.accountsError ?? "No accounts").font(.footnote).foregroundStyle(.secondary)
+            Text(entry.accountsError ?? "No accounts").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
         } else {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(entry.accounts.prefix(5)) { account in
@@ -135,7 +140,7 @@ private struct SessionList: View {
 
     var body: some View {
         if entry.sessions.isEmpty {
-            Text(entry.sessionsError ?? "No sessions").font(.footnote).foregroundStyle(.secondary)
+            Text(entry.sessionsError ?? "No sessions").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
         } else {
             VStack(alignment: .leading, spacing: compact ? 1 : 4) {
                 ForEach(entry.sessions) { s in
@@ -143,8 +148,10 @@ private struct SessionList: View {
                         Circle().fill(color(s.state)).frame(width: 7, height: 7)
                         Text(s.project).font(compact ? .caption : .footnote).bold().lineLimit(1)
                         Spacer(minLength: 2)
-                        Text(compact ? s.state.rawValue : ElapsedFormat.short(Date().timeIntervalSince(s.stateSince)))
-                            .font(.caption2).foregroundStyle(.secondary)
+                        Group {
+                            if compact { Text(s.state.rawValue) } else { Text(s.stateSince, style: .relative) }
+                        }
+                        .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
             }

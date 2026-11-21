@@ -80,7 +80,7 @@ extension StubHTTPTests {
         guard case .failure(.message(let m)) = await c.list(daemon: daemon, token: "t") else {
             Issue.record("expected a message failure"); return
         }
-        #expect(!m.isEmpty)
+        #expect(m == "offline")
     }
 
     @Test func switchPostsToTheNumberedPath() async throws {

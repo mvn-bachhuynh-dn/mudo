@@ -44,6 +44,8 @@ public enum SessionSnapshot {
                     return .failure(.unauthorized)
                 } catch StreamError.http(let code) {
                     return .failure(.http(code))
+                } catch let error as URLError {
+                    return .failure(error.code == .timedOut ? .timeout : .other("offline"))
                 } catch {
                     return .failure(.other(error.localizedDescription))
                 }

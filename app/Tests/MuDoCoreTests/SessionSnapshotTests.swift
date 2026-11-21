@@ -50,6 +50,22 @@ import Testing
         #expect(f.message == "token invalid")
     }
 
+    @Test func fetchMapsNetworkFailuresToOffline() async {
+        let transport = FakeTransport(error: URLError(.notConnectedToInternet))
+        guard case .failure(let f) = await SessionSnapshot.fetch(daemon: daemon, token: "t", transport: transport) else {
+            Issue.record("expected a failure"); return
+        }
+        #expect(f == .other("offline"))
+    }
+
+    @Test func fetchMapsURLTimeoutToTimeout() async {
+        let transport = FakeTransport(error: URLError(.timedOut))
+        guard case .failure(let f) = await SessionSnapshot.fetch(daemon: daemon, token: "t", transport: transport) else {
+            Issue.record("expected a failure"); return
+        }
+        #expect(f == .timeout)
+    }
+
     @Test func fetchMapsHttpErrors() async {
         let transport = FakeTransport(error: StreamError.http(503))
         guard case .failure(let f) = await SessionSnapshot.fetch(daemon: daemon, token: "t", transport: transport) else {

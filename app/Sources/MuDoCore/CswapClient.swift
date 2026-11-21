@@ -60,6 +60,8 @@ public struct CswapClient: Sendable {
                 let text = String(decoding: body, as: UTF8.self)
                 return .failure(.message(CswapCommand.errorLine(text.isEmpty ? "HTTP \(code)" : text)))
             }
+        } catch let error as URLError {
+            return .failure(.message(error.code == .timedOut ? "timed out" : "offline"))
         } catch {
             return .failure(.message(error.localizedDescription))
         }
