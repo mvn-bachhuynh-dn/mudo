@@ -125,6 +125,7 @@ struct SettingsView: View {
                 Toggle("Check for updates", isOn: $settings.checkForUpdates)
                 if model.cswap.available {
                     Toggle("Show Accounts tab (cswap)", isOn: $settings.showAccountsTab)
+                    Toggle("Sort accounts: usable first", isOn: $settings.sortAccountsUsableFirst)
                 }
             } footer: {
                 Text("MuDo \(model.updater.current)" + (model.updater.notice.map { " · \($0) available" } ?? ""))

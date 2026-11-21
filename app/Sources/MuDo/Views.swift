@@ -16,7 +16,7 @@ struct RootView: View {
                     TabBar(tab: Bindable(panel).tab)
                 }
                 if showTabs && panel.tab == .accounts {
-                    AccountListView(cswap: model.cswap)
+                    AccountListView(cswap: model.cswap, usableFirst: model.settings.sortAccountsUsableFirst)
                 } else {
                     SessionListView(model: model, panel: panel)
                 }
