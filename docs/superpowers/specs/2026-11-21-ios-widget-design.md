@@ -27,7 +27,7 @@ Widgets for the MuDo iPhone app that show the active cswap account of a server a
    - the server list moves from `UserDefaults.standard` to the App Group `UserDefaults`; on first launch after the update the app copies the existing list over;
    - tokens stay in the Keychain but use the App Group as the **keychain access group**; on first launch the app copies existing tokens to it and leaves the old items (a delete without an access group could remove the copy); if the shared group cannot be read the app falls back to the old items so a server never loses its token;
    - the app's account sort switch (`sortUsableFirst`) moves to the same shared defaults;
-   - shared Swift code (`KeychainStore`, the server store, the link parsing for `mudo://open`) lives in `app/ios/Shared/`, compiled into both targets; everything else comes from `MuDoCore`.
+   - shared Swift code (`KeychainStore`, the server store) lives in `app/ios/Shared/`, compiled into both targets; everything else comes from `MuDoCore`. The `mudo://open` link parsing lives in `PhoneModel.handle(url:)` (app only).
 9. **Extension.** New target `MuDoWidget` (WidgetKit + AppIntents, iOS 17) in `app/ios/project.yml`, bundle id `dev.steve.MuDoPhone.Widget`, embedded in the app, same ATS exception (`NSAllowsArbitraryLoads`) as the app. Configuration intent `SelectServerIntent: WidgetConfigurationIntent` with a `ServerEntity` (`AppEntity`) listing the servers from the shared store.
 10. **Signing.** The extension needs its own App ID and the App Group; Xcode registers them with `-allowProvisioningUpdates` and the team already used for the app (`mudo-ios-install.command`). CI keeps building for the Simulator without signing, which ignores entitlements.
 
