@@ -1,9 +1,12 @@
 #!/usr/bin/env -S uv run -q --with pillow python
 """Builds MuDo's icons from docs/images/mudo-logo.png (white logo, transparent).
 
-Writes the menu bar template image, the app icon and the README logos.
+Writes the menu bar template image, the Mac app icon, the iPhone app icon and the README logos.
 Run from the repository root after the logo changes; commit the outputs.
 """
+import json
+import os
+
 from PIL import Image, ImageDraw
 
 SRC = "docs/images/mudo-logo.png"
@@ -51,6 +54,35 @@ def app_icon(m):
     return bg
 
 
+def ios_icon(m):
+    """iOS icon: a full-bleed 1024 px square (iOS rounds it) without alpha, logo at 60%."""
+    size = 1024
+    top, bottom = (58, 64, 92), (18, 20, 32)
+    bg = Image.new("RGB", (size, size))
+    d = ImageDraw.Draw(bg)
+    for y in range(size):
+        t = y / (size - 1)
+        d.line([(0, y), (size, y)], fill=tuple(round(a + (b - a) * t) for a, b in zip(top, bottom)))
+    mark = fit(m, round(size * 0.6), round(size * 0.6))
+    p = (size - mark.width) // 2
+    bg.paste(mark, (p, p), mark)
+    return bg
+
+
+def write_ios_icon(icon):
+    """Writes the AppIcon set into the iPhone app's asset catalog."""
+    root = "app/ios/MuDoPhone/Assets.xcassets"
+    iconset = f"{root}/AppIcon.appiconset"
+    os.makedirs(iconset, exist_ok=True)
+    icon.save(f"{iconset}/icon-1024.png")
+    info = {"author": "xcode", "version": 1}
+    with open(f"{root}/Contents.json", "w") as f:
+        json.dump({"info": info}, f, indent=2)
+    with open(f"{iconset}/Contents.json", "w") as f:
+        json.dump({"images": [{"filename": "icon-1024.png", "idiom": "universal",
+                               "platform": "ios", "size": "1024x1024"}], "info": info}, f, indent=2)
+
+
 def main():
     m = logo()
     # Menu bar: a template image (only alpha counts), 16 pt tall.
@@ -60,6 +92,7 @@ def main():
     icon = app_icon(m)
     icon.save("app/Resources/AppIcon.icns",
               sizes=[(16, 16), (32, 32), (64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024)])
+    write_ios_icon(ios_icon(m))
     # README: the white logo for dark mode, a dark one for light mode.
     padded = fit(m, 240, 200)
     padded.save("docs/images/logo-dark.png")
