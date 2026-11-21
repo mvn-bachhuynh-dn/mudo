@@ -71,7 +71,7 @@ private struct Fetched: View {
     }
 }
 
-private func tint(_ pct: Double) -> Color {
+private func severityColor(_ pct: Double) -> Color {
     switch CswapSeverity(pct: pct) {
     case .low: .green
     case .medium: .orange
@@ -84,7 +84,7 @@ private struct UsageBar: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(window.name).font(.caption2).frame(width: 22, alignment: .leading)
-            ProgressView(value: min(max(window.pct, 0), 100) / 100).tint(tint(window.pct))
+            ProgressView(value: min(max(window.pct, 0), 100) / 100).tint(severityColor(window.pct))
             Text(CswapRowModel.percent(window.pct)).font(.caption2).frame(width: 34, alignment: .trailing)
         }
     }
