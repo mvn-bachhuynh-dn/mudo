@@ -5,7 +5,7 @@ import WidgetKit
 struct AccountsView: View {
     @Bindable var cswap: PhoneCswap
     @State private var confirming: Pending?
-    @AppStorage(SharedConfig.sortKey, store: SharedConfig.defaults) private var usableFirst = true
+    @State private var usableFirst = ServerStore.sortUsableFirst
 
     private struct Pending: Identifiable {
         let source: CswapSource
@@ -49,7 +49,10 @@ struct AccountsView: View {
                     }
                 }
             }
-            .onChange(of: usableFirst) { _, _ in WidgetCenter.shared.reloadAllTimelines() }
+            .onChange(of: usableFirst) { _, value in
+                ServerStore.sortUsableFirst = value
+                WidgetCenter.shared.reloadAllTimelines()
+            }
             .refreshable { await cswap.refresh() }
             .task {
                 while !Task.isCancelled {
