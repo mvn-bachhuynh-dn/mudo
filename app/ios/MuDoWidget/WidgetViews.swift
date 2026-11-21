@@ -6,6 +6,10 @@ struct MuDoWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: MuDoEntry
 
+    // Link is only honoured in the medium and large home widgets; everything else uses .widgetURL.
+    private static let accountsURL = URL(string: "mudo://open?tab=accounts")!
+    private static let sessionsURL = URL(string: "mudo://open?tab=sessions")!
+
     var body: some View {
         content
             .containerBackground(.fill.tertiary, for: .widget)
@@ -22,20 +26,24 @@ struct MuDoWidgetView: View {
                 VStack(alignment: .leading, spacing: 4) { AccountBlock(entry: entry); Spacer(minLength: 0); Fetched(date: entry.date, server: entry.serverName) }
             case .systemMedium:
                 HStack(alignment: .top, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 4) { AccountBlock(entry: entry); Spacer(minLength: 0); Fetched(date: entry.date, server: entry.serverName) }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Link(destination: Self.accountsURL) { AccountBlock(entry: entry) }
+                        Spacer(minLength: 0)
+                        Fetched(date: entry.date, server: entry.serverName)
+                    }
                     Divider()
-                    SessionList(entry: entry, compact: false)
+                    Link(destination: Self.sessionsURL) { SessionList(entry: entry, compact: false) }
                 }
             case .systemLarge:
                 VStack(alignment: .leading, spacing: 6) {
-                    AccountList(entry: entry)
+                    Link(destination: Self.accountsURL) { AccountList(entry: entry) }
                     Divider()
-                    SessionList(entry: entry, compact: false)
+                    Link(destination: Self.sessionsURL) { SessionList(entry: entry, compact: false) }
                     Spacer(minLength: 0)
                     Fetched(date: entry.date, server: entry.serverName)
                 }
             case .accessoryRectangular:
-                if entry.content == .sessions { SessionList(entry: entry, compact: true) } else { AccountBlock(entry: entry) }
+                if entry.content == .sessions { SessionList(entry: entry, compact: true) } else { LockAccountBlock(entry: entry) }
             case .accessoryCircular:
                 if let w = entry.active?.windows.first(where: { $0.name == "5h" }) {
                     Gauge(value: min(max(w.pct, 0), 100) / 100) { Text("5h") } currentValueLabel: { Text(CswapRowModel.percent(w.pct)) }
@@ -104,6 +112,28 @@ private struct AccountBlock: View {
             }
         } else {
             Text(entry.accountsError ?? "No active account").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+        }
+    }
+}
+
+/// Lock screen rectangle: the whole account name (2 lines, shrinks) and one usage line.
+private struct LockAccountBlock: View {
+    let entry: MuDoEntry
+
+    var body: some View {
+        if let account = entry.active {
+            let row = CswapRowModel(account)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.title).font(.footnote).bold().lineLimit(2).minimumScaleFactor(0.7)
+                if let detail = row.detail {
+                    Text(detail).font(.caption2).lineLimit(1)
+                } else {
+                    Text(account.windows.prefix(2).map { "\($0.name) \(CswapRowModel.percent($0.pct))" }.joined(separator: " · "))
+                        .font(.caption2).lineLimit(1)
+                }
+            }
+        } else {
+            Text(entry.accountsError ?? "No active account").font(.footnote).lineLimit(2)
         }
     }
 }
