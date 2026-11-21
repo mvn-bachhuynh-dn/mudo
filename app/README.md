@@ -57,6 +57,14 @@ The generated `ios/MuDoPhone.xcodeproj` is git-ignored. `make ios-app` only comp
 mudod fake --addr 127.0.0.1:7881 --token fake-token --step 3s
 ```
 
+### Widgets
+
+`ios/MuDoWidget` is the WidgetKit extension (home screen small, medium, large; lock screen rectangular, circular, inline; configured with an App Intent that picks the server). It refreshes every 15 minutes (5 minutes after a failed fetch), as a request to iOS, not a guarantee. A tap opens `mudo://open?tab=accounts` (or `tab=sessions`).
+
+`ios/Shared` is compiled into both the app and the extension: the App Group constants, the server store (App Group `UserDefaults`) and `KeychainStore`. The App Group is `group.dev.steve.MuDoPhone`; tokens use it as Keychain access group. On launch the app copies the server list and the sort switch from the standard defaults (once) and copies legacy Keychain tokens into the shared group; the old items are left in place, and reads fall back to them if the shared group fails. Not yet verified on a real device.
+
+The extension has its own bundle id (`dev.steve.MuDoPhone.Widget`) and therefore its own App ID. Signing for a device needs the team to register that App ID and the App Group: build with `-allowProvisioningUpdates` so Xcode does it. The unsigned Simulator build in CI ignores entitlements.
+
 CI builds both the Mac and the iOS targets on `macos-26`. User-facing steps (install, free Apple ID re-signing): see the [top-level README](../README.md#iphone-app).
 
 ## Add a server
