@@ -17,7 +17,7 @@ enum Loader {
         var entry = MuDoEntry(date: .now, serverName: config.name, content: content)
         switch await accountsResult {
         case .success(let list):
-            let usableFirst = SharedConfig.defaults.object(forKey: SharedConfig.sortKey) as? Bool ?? true
+            let usableFirst = ServerStore.sortUsableFirst
             entry.accounts = CswapOrder.sorted(list.accounts, usableFirst: usableFirst)
         case .failure(let failure):
             entry.accountsError = failure.message

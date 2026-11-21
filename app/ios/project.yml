@@ -27,11 +27,12 @@ targets:
     entitlements:
       path: MuDoPhone/MuDoPhone.entitlements
       properties:
-        com.apple.security.application-groups: [group.dev.steve.MuDoPhone]
+        keychain-access-groups: [$(AppIdentifierPrefix)dev.steve.MuDoPhone.shared]
     info:
       path: MuDoPhone/Info.plist
       properties:
         CFBundleDisplayName: MuDo
+        MuDoSharedKeychainGroup: $(AppIdentifierPrefix)dev.steve.MuDoPhone.shared
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSLocalNetworkUsageDescription: MuDo connects to mudod on your servers to show agent sessions.
@@ -50,7 +51,7 @@ targets:
     entitlements:
       path: MuDoWidget/MuDoWidget.entitlements
       properties:
-        com.apple.security.application-groups: [group.dev.steve.MuDoPhone]
+        keychain-access-groups: [$(AppIdentifierPrefix)dev.steve.MuDoPhone.shared]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.steve.MuDoPhone.Widget
@@ -60,6 +61,7 @@ targets:
       path: MuDoWidget/Info.plist
       properties:
         CFBundleDisplayName: MuDo
+        MuDoSharedKeychainGroup: $(AppIdentifierPrefix)dev.steve.MuDoPhone.shared
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSAppTransportSecurity:
