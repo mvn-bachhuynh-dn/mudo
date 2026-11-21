@@ -4,6 +4,7 @@ import SwiftUI
 struct AccountsView: View {
     @Bindable var cswap: PhoneCswap
     @State private var confirming: Pending?
+    @AppStorage("sortUsableFirst") private var usableFirst = true
 
     private struct Pending: Identifiable {
         let source: CswapSource
@@ -26,7 +27,7 @@ struct AccountsView: View {
                     if let error = source.error {
                         Text(error).font(.footnote).foregroundStyle(.red)
                     }
-                    ForEach(source.accounts) { account in
+                    ForEach(CswapOrder.sorted(source.accounts, usableFirst: usableFirst)) { account in
                         AccountRow(account: account, busy: cswap.switching == "\(source.id)/\(account.number)")
                             .contentShape(Rectangle())
                             .accessibilityAddTraits(.isButton)
@@ -38,6 +39,15 @@ struct AccountsView: View {
             }
             .listStyle(.plain)
             .navigationTitle("Accounts")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Toggle("Usable accounts first", isOn: $usableFirst)
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                    }
+                }
+            }
             .refreshable { await cswap.refresh() }
             .task {
                 while !Task.isCancelled {
