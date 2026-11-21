@@ -26,8 +26,9 @@ import Testing
     @Test func firstReturnsTheSnapshotSessions() async throws {
         let transport = FakeTransport(events: [SSEEvent(event: "ping", data: Self.pingJSON),
                                                SSEEvent(event: "snapshot", data: Self.snapshotJSON)])
-        let sessions = try await SessionSnapshot.first(from: transport.events(url: daemon, token: "t"))
-        #expect(sessions?.map(\.id) == ["s1"])
+        let snapshot = try await SessionSnapshot.first(from: transport.events(url: daemon, token: "t"))
+        #expect(snapshot?.sessions.map(\.id) == ["s1"])
+        #expect(snapshot?.serverNow == utc(2026, 11, 21, 1, 0, 0))
     }
 
     @Test func firstIsNilWithoutASnapshot() async throws {
@@ -35,10 +36,12 @@ import Testing
         #expect(try await SessionSnapshot.first(from: transport.events(url: daemon, token: "t")) == nil)
     }
 
-    @Test func fetchReturnsTheSessions() async {
+    @Test func fetchReturnsTheSnapshot() async {
         let transport = FakeTransport(events: [SSEEvent(event: "snapshot", data: Self.snapshotJSON)])
         let result = await SessionSnapshot.fetch(daemon: daemon, token: "t", transport: transport)
-        #expect((try? result.get())?.map(\.id) == ["s1"])
+        let snapshot = try? result.get()
+        #expect(snapshot?.sessions.map(\.id) == ["s1"])
+        #expect(snapshot?.serverNow == utc(2026, 11, 21, 1, 0, 0))
     }
 
     @Test func fetchMapsUnauthorized() async {

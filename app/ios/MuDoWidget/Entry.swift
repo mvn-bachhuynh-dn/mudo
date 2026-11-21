@@ -7,7 +7,7 @@ struct MuDoEntry: TimelineEntry {
     /// Accounts of the server, already sorted for display.
     var accounts: [CswapAccount] = []
     var accountsError: String?
-    /// The 3 most recent sessions.
+    /// The first 3 sessions in the same order as the Sessions tab.
     var sessions: [Session] = []
     var sessionsError: String?
     /// Shown instead of everything else (no server, no token).

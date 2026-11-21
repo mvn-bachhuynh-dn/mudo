@@ -228,13 +228,8 @@ extension SessionStore {
                 let key = SessionKey(serverID: serverID, sessionID: s.id)
                 let since = s.stateSince.addingTimeInterval(-server.offset)
                 let elapsed = max(0, now.timeIntervalSince(since))
-                let bucket: Bucket = switch s.state {
-                case .waiting: .waiting
-                case .done: elapsed >= staleAfter ? .stale : .done
-                case .running: .running
-                case .idle, .ended: .idle
-                }
-                if bucket == .idle, let limit = hideIdleAfter, elapsed >= limit { continue }
+                let bucket = SessionOrder.bucket(state: s.state, elapsed: elapsed, staleAfter: staleAfter)
+                if SessionOrder.isHidden(bucket, elapsed: elapsed, hideIdleAfter: hideIdleAfter) { continue }
                 let snoozed = snoozedUntil[key].map { $0 > now } ?? false
                 out.append(SessionRow(
                     id: key, session: s, serverName: server.name, bucket: bucket,
@@ -243,13 +238,11 @@ extension SessionStore {
                     offline: offline))
             }
         }
-        return out.sorted { a, b in
-            if a.bucket != b.bucket { return a.bucket < b.bucket }
-            // Idle sessions: the one you finished with last on top; others: longest in state first.
-            if a.since != b.since { return a.bucket == .idle ? a.since > b.since : a.since < b.since }
-            if a.id.serverID != b.id.serverID { return a.id.serverID.uuidString < b.id.serverID.uuidString }
-            return a.id.sessionID < b.id.sessionID
+        func key(_ r: SessionRow) -> SessionOrder.Key {
+            SessionOrder.Key(bucket: r.bucket, since: r.since, serverID: r.id.serverID.uuidString,
+                             sessionID: r.id.sessionID)
         }
+        return out.sorted { SessionOrder.precedes(key($0), key($1)) }
     }
 
     public var pill: PillSummary {
