@@ -7,12 +7,15 @@ public struct CswapWindow: Equatable, Sendable {
     /// Local reset time as cswap prints it ("22:49", "Nov 14 05:59"); nil when not reported.
     public var clock: String?
     public var countdown: String?
+    /// Absolute reset time (`resetsAt` in the JSON); nil when not reported.
+    public var resetsAt: Date?
 
-    public init(name: String, pct: Double, clock: String?, countdown: String?) {
+    public init(name: String, pct: Double, clock: String?, countdown: String?, resetsAt: Date? = nil) {
         self.name = name
         self.pct = pct
         self.clock = clock
         self.countdown = countdown
+        self.resetsAt = resetsAt
     }
 }
 
@@ -105,9 +108,23 @@ public enum CswapList {
         return out
     }
 
+    /// ISO 8601 with or without fractional seconds ("2026-11-22T09:00:00.334823+00:00").
+    private static func parseDate(_ text: String) -> Date? {
+        let plain = ISO8601DateFormatter()
+        if let d = plain.date(from: text) { return d }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = fractional.date(from: text) { return d }
+        // Microsecond digits are more than the formatter takes: cut the fraction.
+        guard let dot = text.firstIndex(of: "."),
+              let end = text[dot...].firstIndex(where: { $0 == "+" || $0 == "-" || $0 == "Z" }) else { return nil }
+        return plain.date(from: String(text[..<dot]) + String(text[end...]))
+    }
+
     private static func window(_ name: String, _ o: [String: Any]) -> CswapWindow? {
         guard let pct = (o["pct"] as? NSNumber)?.doubleValue else { return nil }
-        return CswapWindow(name: name, pct: pct, clock: o["clock"] as? String, countdown: o["countdown"] as? String)
+        return CswapWindow(name: name, pct: pct, clock: o["clock"] as? String, countdown: o["countdown"] as? String,
+                           resetsAt: (o["resetsAt"] as? String).flatMap(parseDate))
     }
 }
 
