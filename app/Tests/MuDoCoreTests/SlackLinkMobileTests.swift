@@ -12,7 +12,7 @@ import Testing
 
     @Test func teamAndThread() {
         #expect(SlackLink.mobileURL(channel: channel, team: team, thread: ts, includeThread: true)
-            == URL(string: "slack://channel?team=T0ABCDEF1&id=C0ABCDEF2&message=1700000000.000100"))
+            == URL(string: "slack://channel?team=T0ABCDEF1&id=C0ABCDEF2&message=1700000000.000100&thread_ts=1700000000.000100"))
     }
 
     @Test func threadParameterOff() {

@@ -25,11 +25,11 @@ public enum SlackLink {
         return URL(string: "https://app.slack.com/client/\(team)/\(channel)\(path)").map { .web($0, team: team) }
     }
 
-    /// Slack's documented `slack://channel` link has no thread parameter. `&message=<thread ts>` is
-    /// UNDOCUMENTED and may be ignored (the app then opens the channel only). Set to false to open the channel only.
+    /// Slack's documented `slack://channel` link has no thread parameter. `&message=<ts>&thread_ts=<ts>` is
+    /// UNDOCUMENTED (confirmed on an iPhone: `message` alone opens the channel only, both open the thread) and may be ignored (the app then opens the channel only). Set to false to open the channel only.
     public static let mobileThreadParameter: Bool = true
 
-    /// The link a phone opens in the Slack app: `slack://channel?team=<T>&id=<C>` (plus `&message=<ts>` for a
+    /// The link a phone opens in the Slack app: `slack://channel?team=<T>&id=<C>` (plus `&message=<ts>&thread_ts=<ts>` for a
     /// valid `thread` while `mobileThreadParameter` is on). Without a valid `team`: slack.com's redirect.
     /// Nil if `channel` is not a valid channel ID.
     public static func mobileURL(channel: String, team: String?, thread: String?) -> URL? {
@@ -41,7 +41,7 @@ public enum SlackLink {
         let team = team?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard isTeam(team) else { return URL(string: "https://slack.com/app_redirect?channel=\(channel)") }
         var link = "slack://channel?team=\(team)&id=\(channel)"
-        if includeThread, let thread, isThread(thread) { link += "&message=\(thread)" }
+        if includeThread, let thread, isThread(thread) { link += "&message=\(thread)&thread_ts=\(thread)" }
         return URL(string: link)
     }
 
