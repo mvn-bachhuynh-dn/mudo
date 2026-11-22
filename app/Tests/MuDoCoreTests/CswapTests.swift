@@ -89,4 +89,15 @@ import Testing
         #expect(CswapCommand.errorLine("A newer version of x is available\n\nerror: bad account\nmore") == "error: bad account")
         #expect(CswapCommand.errorLine("") == "cswap failed")
     }
+
+    @Test func parsesResetsAtWithAndWithoutFractionalSeconds() throws {
+        let r = try parse("""
+        {"schemaVersion":1,"accounts":[{"number":1,"email":"a@example.com","usageStatus":"ok",
+         "usage":{"fiveHour":{"pct":1.0,"resetsAt":"2026-11-16T17:00:00.334800+00:00"},
+                  "sevenDay":{"pct":1.0,"resetsAt":"2026-11-22T09:00:00Z"}}}]}
+        """)
+        let w = r.accounts[0].windows
+        #expect(abs(w[0].resetsAt!.timeIntervalSince(ISO8601DateFormatter().date(from: "2026-11-16T17:00:00Z")!)) < 1)
+        #expect(w[1].resetsAt == ISO8601DateFormatter().date(from: "2026-11-22T09:00:00Z"))
+    }
 }
