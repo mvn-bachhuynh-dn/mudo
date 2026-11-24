@@ -10,6 +10,10 @@ struct RootView: View {
             PillView(summary: model.store.pill, hasServers: !model.settings.servers.isEmpty)
                 .contentShape(Rectangle())
                 .onTapGesture { panel.togglePinned() }
+            if !panel.isExpanded, model.settings.showAccountsTab,
+               let pick = CswapCompact.pick(in: model.cswap.current) {
+                CompactUsageView(pick: pick)
+            }
             if panel.isExpanded {
                 let showTabs = model.settings.showAccountsTab && model.cswap.available
                 if showTabs {

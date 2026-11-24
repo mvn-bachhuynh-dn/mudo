@@ -240,6 +240,8 @@ final class AppModel {
         store.tick()
         ticks += 1
         if ticks % 2 == 0 { autoAckTick() }
+        // Keeps the collapsed usage bars fresh.
+        if ticks % 60 == 0, settings.showAccountsTab { Task { [cswap] in await cswap.refresh() } }
     }
 
     private func watchWakeAndNetwork() {

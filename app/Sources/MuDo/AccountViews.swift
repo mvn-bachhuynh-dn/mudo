@@ -134,6 +134,7 @@ struct UsageBar: View {
     let window: CswapWindow
     /// False for stale readings: their reset time has already passed.
     let showReset: Bool
+    var leading: CGFloat = 20
 
     var body: some View {
         HStack(spacing: 6) {
@@ -149,10 +150,12 @@ struct UsageBar: View {
             .frame(height: 5)
             Text(CswapRowModel.percent(window.pct)).font(.caption2.monospacedDigit())
                 .frame(width: 32, alignment: .trailing)
-            Text(showReset ? (window.countdown.map { "in \($0)" } ?? "") : "").font(.caption2).foregroundStyle(.secondary)
-                .frame(width: 56, alignment: .leading).lineLimit(1)
+            if leading > 0 {
+                Text(showReset ? (window.countdown.map { "in \($0)" } ?? "") : "").font(.caption2).foregroundStyle(.secondary)
+                    .frame(width: 56, alignment: .leading).lineLimit(1)
+            }
         }
-        .padding(.leading, 20)
+        .padding(.leading, leading)
     }
 
     private var color: Color {
@@ -161,5 +164,21 @@ struct UsageBar: View {
         case .medium: .orange
         case .high: .red
         }
+    }
+}
+
+/// Two thin bars (5h, 7d) of the active account, shown under the pill while the widget is collapsed.
+struct CompactUsageView: View {
+    let pick: CswapCompact.Pick
+
+    var body: some View {
+        VStack(spacing: 3) {
+            ForEach(Array(pick.windows.enumerated()), id: \.offset) { _, w in
+                UsageBar(window: w, showReset: false, leading: 0)
+            }
+        }
+        .padding(.horizontal, 8)
+        .opacity(pick.stale ? 0.55 : 1)
+        .frame(width: 190)
     }
 }
