@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.17.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.16.0...v0.17.0) (2026-11-24)
+
+
+### Features
+
+* **app:** save the cswap source and pick it in Settings ([#74](https://github.com/mvn-bachhuynh-dn/mudo/issues/74)) ([16882e3](https://github.com/mvn-bachhuynh-dn/mudo/commit/16882e3d3703e1363351b34448b177eff5206b95))
+* **app:** usage bars of the active account when collapsed ([#73](https://github.com/mvn-bachhuynh-dn/mudo/issues/73)) ([6956d1a](https://github.com/mvn-bachhuynh-dn/mudo/commit/6956d1a6e3dcf279224c7cade23f9a30eee5fa62))
+* **ios:** add the app icon ([#62](https://github.com/mvn-bachhuynh-dn/mudo/issues/62)) ([cf2c7aa](https://github.com/mvn-bachhuynh-dn/mudo/commit/cf2c7aad0813f1a8684f13b167813fb82a965ae2))
+* **ios:** home screen and lock screen widgets ([#64](https://github.com/mvn-bachhuynh-dn/mudo/issues/64)) ([b764983](https://github.com/mvn-bachhuynh-dn/mudo/commit/b7649835c42fb4362a39921ffa7b4c8ec5ef43f5))
+* **ios:** open the Slack thread from a session in the app and the widget ([#70](https://github.com/mvn-bachhuynh-dn/mudo/issues/70)) ([0267a71](https://github.com/mvn-bachhuynh-dn/mudo/commit/0267a7166669f6f036520b4e4a1ca8630acaabbd))
+* **ios:** refresh the widgets when the app opens and every 5 minutes ([#67](https://github.com/mvn-bachhuynh-dn/mudo/issues/67)) ([267aed8](https://github.com/mvn-bachhuynh-dn/mudo/commit/267aed8d396b40c283f308b2e1db5ed5cd7552ec))
+* sort cswap accounts by weekly then 5h reset time ([#72](https://github.com/mvn-bachhuynh-dn/mudo/issues/72)) ([78d3fe9](https://github.com/mvn-bachhuynh-dn/mudo/commit/78d3fe9e5cdda40ffef0b2b502941fbe0ee3cdf3))
+* sort the cswap accounts, usable first ([#63](https://github.com/mvn-bachhuynh-dn/mudo/issues/63)) ([03f87d2](https://github.com/mvn-bachhuynh-dn/mudo/commit/03f87d2261df10830286937c38a90b0bc86ae7a0))
+
+
+### Bug Fixes
+
+* **ios:** add thread_ts so the Slack link opens the thread ([#71](https://github.com/mvn-bachhuynh-dn/mudo/issues/71)) ([804c170](https://github.com/mvn-bachhuynh-dn/mudo/commit/804c170930423d71152700fbffaab4244ba17d01))
+* **ios:** keep iOS from offering to save the server token as a password ([#59](https://github.com/mvn-bachhuynh-dn/mudo/issues/59)) ([cea5cc5](https://github.com/mvn-bachhuynh-dn/mudo/commit/cea5cc5c050888b77ade9646027f59436f5ed6be))
+* **ios:** keep the lock screen account name on one line ([#69](https://github.com/mvn-bachhuynh-dn/mudo/issues/69)) ([4a49d86](https://github.com/mvn-bachhuynh-dn/mudo/commit/4a49d86c1b2d3ef864fc3dbd153dd2a508a41e68))
+* **ios:** open the matching tab from each part of the widget and show long names on the lock screen ([#68](https://github.com/mvn-bachhuynh-dn/mudo/issues/68)) ([c30ae98](https://github.com/mvn-bachhuynh-dn/mudo/commit/c30ae980de1aada13daff3389abb42f0dd8d4696))
+* **ios:** order the widget sessions like the Sessions tab ([#66](https://github.com/mvn-bachhuynh-dn/mudo/issues/66)) ([9548675](https://github.com/mvn-bachhuynh-dn/mudo/commit/9548675e0df701ed62f5af3516c6d2f3ed5800fb))
+* **ios:** share data with the widget through a Keychain access group ([#65](https://github.com/mvn-bachhuynh-dn/mudo/issues/65)) ([fa4a55d](https://github.com/mvn-bachhuynh-dn/mudo/commit/fa4a55dc06b37d4c8f099cd5d9d505f0ecddd2ad))
+
+
+### Documentation
+
+* record the first run on a real iPhone ([#61](https://github.com/mvn-bachhuynh-dn/mudo/issues/61)) ([a5a0f10](https://github.com/mvn-bachhuynh-dn/mudo/commit/a5a0f102668f2eaae164c1fd24748c7290368f8a))
+
 ## [0.16.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.15.0...v0.16.0) (2026-11-20)
 
 
