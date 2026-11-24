@@ -17,7 +17,7 @@ struct AccountListView: View {
         VStack(alignment: .leading, spacing: 4) {
             // cswap keeps accounts per machine: one machine at a time, never mixed in one list.
             if cswap.sources.count > 1 {
-                Picker("", selection: Bindable(cswap).selectedSource) {
+                Picker("", selection: Binding(get: { cswap.current?.id ?? cswap.selectedSource }, set: { cswap.selectedSource = $0 })) {
                     ForEach(cswap.sources) { Text($0.name).tag($0.id) }
                 }
                 .pickerStyle(.segmented)

@@ -13,8 +13,11 @@ final class CswapModel {
     /// "<source id>/<number>" being switched to; all rows are disabled while set.
     private(set) var switching: String?
     private(set) var binary: String?
-    /// Id of the source the tab shows; falls back to the first when it is gone.
-    var selectedSource = "local"
+    /// Id of the source the tab and the collapsed bars show. Saved, so it survives a restart and a
+    /// server being offline; `current` falls back to the first source while this one is missing.
+    var selectedSource: String = UserDefaults.standard.string(forKey: "cswapSource") ?? "local" {
+        didSet { UserDefaults.standard.set(selectedSource, forKey: "cswapSource") }
+    }
     /// Supplies the remote servers (not the managed local one) and their tokens.
     @ObservationIgnored var servers: () -> [(config: ServerConfig, token: String)] = { [] }
 
@@ -70,9 +73,6 @@ final class CswapModel {
         }
         next += await CswapSources.loadRemote(servers: servers(), client: client)
         sources = next
-        if !next.contains(where: { $0.id == selectedSource }), let first = next.first {
-            selectedSource = first.id
-        }
     }
 
     func switchTo(_ account: CswapAccount, in source: CswapSource) async {

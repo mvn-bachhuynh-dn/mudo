@@ -126,6 +126,13 @@ struct SettingsView: View {
                 if model.cswap.available {
                     Toggle("Show Accounts tab (cswap)", isOn: $settings.showAccountsTab)
                     Toggle("Sort accounts: usable first", isOn: $settings.sortAccountsUsableFirst)
+                    if model.cswap.sources.count > 1 {
+                        Picker("Account source", selection: Binding(
+                            get: { model.cswap.current?.id ?? model.cswap.selectedSource },
+                            set: { model.cswap.selectedSource = $0 })) {
+                            ForEach(model.cswap.sources) { Text($0.name).tag($0.id) }
+                        }
+                    }
                 }
             } footer: {
                 Text("MuDo \(model.updater.current)" + (model.updater.notice.map { " · \($0) available" } ?? ""))
