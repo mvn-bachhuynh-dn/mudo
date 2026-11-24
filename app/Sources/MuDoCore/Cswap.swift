@@ -191,3 +191,17 @@ public enum CswapCommand {
         return lines.first ?? "cswap failed"
     }
 }
+
+/// What the collapsed widget shows: the 5h and 7d windows of the source's active account.
+public enum CswapCompact {
+    public struct Pick: Equatable, Sendable {
+        public var windows: [CswapWindow]
+        public var stale: Bool
+    }
+
+    public static func pick(in source: CswapSource?) -> Pick? {
+        guard let account = source?.accounts.first(where: \.active) else { return nil }
+        let windows = account.windows.filter { $0.name == "5h" || $0.name == "7d" }
+        return windows.isEmpty ? nil : Pick(windows: windows, stale: account.stale)
+    }
+}
