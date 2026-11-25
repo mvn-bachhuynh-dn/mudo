@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.17.0...v0.17.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* **packaging:** use non-deprecated cask syntax for macOS and postflight ([#75](https://github.com/mvn-bachhuynh-dn/mudo/issues/75)) ([41d3657](https://github.com/mvn-bachhuynh-dn/mudo/commit/41d3657e55a42155f29d40dbed27affa3b64dd8e))
+
 ## [0.17.0](https://github.com/mvn-bachhuynh-dn/mudo/compare/v0.16.0...v0.17.0) (2026-11-24)
 
 
