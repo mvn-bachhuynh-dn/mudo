@@ -15,15 +15,16 @@ cask "mudo" do
   end
 
   depends_on arch: :arm64
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "MuDo.app"
 
   # The app is signed ad hoc, not notarized: clear the quarantine flag so Gatekeeper
   # does not block the first launch.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/MuDo.app"]
+  postflight_steps do
+    run "/usr/bin/xattr",
+        args:           ["-dr", "com.apple.quarantine", "{{appdir}}/MuDo.app"],
+        writable_paths: ["{{appdir}}/MuDo.app"]
   end
 
   uninstall quit: "dev.steve.MuDo"
